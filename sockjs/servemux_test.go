@@ -2,20 +2,17 @@ package sockjs
 
 import (
 	. "launchpad.net/gocheck"
-	"testing"
 	"net/http"
+	"testing"
 )
 
-// Hook up gocheck into the gotest runner.
 func Test(t *testing.T) {
 	TestingT(t)
 }
 
 type ServeMuxSuite struct{}
 
-func init() {
-	Suite(&ServeMuxSuite{})
-}
+var _ = Suite(&ServerMuxSuite{})
 
 type nopHandler int
 
@@ -36,5 +33,3 @@ func (s *ServeMuxSuite) TestServeMuxMatch(c *C) {
 	c.Check(mux.match("/prefix/foobar?zot=5&baz=2"), Equals, short)
 	c.Check(mux.match("/notfound"), Equals, alt)
 }
-
-
