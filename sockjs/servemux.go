@@ -6,33 +6,24 @@ import (
 )
 
 // ServeMux is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
-// but just for sockjs.Handlers. It can optionally wrap a http.Handler which is called for
-// non-sockjs paths.
+// but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
+// for non-sockjs paths.
 type ServeMux struct {
 	mu  sync.RWMutex
-	m   map[string]*Handler
+	m   map[string]http.Handler
 	alt http.Handler
 }
 
 func NewServeMux(alt http.Handler) *ServeMux {
 	m := new(ServeMux)
-	m.m = make(map[string]*Handler)
+	m.m = make(map[string]http.Handler)
 	m.alt = alt
 	return m
 }
 
 func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var h http.Handler
-	h = m.match(r.URL.Path)
-	if h == nil {
-		if m.alt != nil {
-			m.alt.ServeHTTP(w, r)
-		} else {
-			h = http.NotFoundHandler()
-		}
-	} else {
-		h.ServeHTTP(w, r)
-	}
+	h := m.match(r.URL.Path)
+	h.ServeHTTP(w, r)
 }
 
 func (m *ServeMux) Handle(handler *Handler) {
@@ -54,8 +45,9 @@ func pathMatch(prefix, path string) bool {
 	return len(path) >= len(prefix) && path[0:len(prefix)] == prefix
 }
 
-// Find a handler on a handler map given a path string
-// Most-specific (longest) prefix wins
+// Return a handler from the handler map that matches the given a path.
+// Most-specific (longest) prefix wins.
+// If no handler is found, return the alternate handler or http.NotFoundHandler().
 func (m *ServeMux) match(path string) (h http.Handler) {
 	var n = 0
 	m.mu.RLock()
@@ -67,6 +59,13 @@ func (m *ServeMux) match(path string) (h http.Handler) {
 		if h == nil || len(k) > n {
 			n = len(k)
 			h = http.Handler(v)
+		}
+	}
+	if h == nil {
+		if m.alt != nil {
+			return m.alt
+		} else {
+			h = http.NotFoundHandler()
 		}
 	}
 	return
