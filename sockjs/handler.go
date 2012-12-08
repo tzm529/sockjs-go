@@ -27,6 +27,8 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	println("ServeHTTP:", path, method)
 
 	switch {
+	case method == "GET" && path == s.config.Prefix || path == s.config.Prefix+"/":
+		handleGreeting(w)
 	case method == "GET" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
 		protocol := matches[2]
