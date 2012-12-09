@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+var reInfo = regexp.MustCompile("/info$")
 var reSessionUrl = regexp.MustCompile(
 	`/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|websocket|jsonp|jsonp_send)$`)
 
@@ -29,6 +30,10 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case method == "GET" && path == s.config.Prefix || path == s.config.Prefix+"/":
 		handleGreeting(w)
+	case method == "GET" && reInfo.MatchString(path):
+		handleInfo(w, r, s)
+	case method == "OPTIONS" && reInfo.MatchString(path):
+		handleInfoOptions(w, r)
 	case method == "GET" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
 		protocol := matches[2]
@@ -39,5 +44,4 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
-
 }
