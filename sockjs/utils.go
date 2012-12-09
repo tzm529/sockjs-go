@@ -5,7 +5,6 @@ import (
 )
 
 func aframe(messages ...string) []byte {
-	s, err := json.Marshal(&messages)
-	if err != nil { panic("sockjs: " + err.Error()) }
+	s, _ := json.Marshal(&messages)
 	return append([]byte{'a'}, s...)
 }
