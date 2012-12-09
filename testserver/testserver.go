@@ -22,32 +22,24 @@ func echoClose(c *sockjs.Conn) {
 func main() {
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
 	mux := sockjs.NewServeMux(http.DefaultServeMux)
-	echoHandler := sockjs.NewHandler(sockjs.Config{
-		SockjsUrl:     "http://cdn.sockjs.org/sockjs-0.3.4.min.js",
-		Prefix: "/echo",
-		Websocket:     true,
-		ResponseLimit: 4096,
-	})
+	c := sockjs.NewConfig()
+	c.Prefix = "/echo"
+	echoHandler := sockjs.NewHandler(c)
 	echoHandler.OnOpen = echoOpen
 	echoHandler.OnMessage = echoMessage
 	echoHandler.OnClose = echoClose
 
-	dwsechoHandler := sockjs.NewHandler(sockjs.Config{
-		SockjsUrl:     "http://cdn.sockjs.org/sockjs-0.3.4.min.js",
-		Prefix: "/disabled_websocket_echo",
-		Websocket:     false,
-		ResponseLimit: 4096,
-	})
+	c = sockjs.NewConfig()
+	c.Prefix = "/disabled_websocket_echo"
+	c.Websocket = false
+	dwsechoHandler := sockjs.NewHandler(c)
 	dwsechoHandler.OnOpen = echoOpen
 	dwsechoHandler.OnMessage = echoMessage
 	dwsechoHandler.OnClose = echoClose
 
-	closeHandler := sockjs.NewHandler(sockjs.Config{
-		SockjsUrl:     "http://cdn.sockjs.org/sockjs-0.3.4.min.js",
-		Prefix: "/close",
-		Websocket:     true,
-		ResponseLimit: 4096,
-	})
+	c = sockjs.NewConfig()
+	c.Prefix = "/close"
+	closeHandler := sockjs.NewHandler(c)
 	closeHandler.OnOpen = func(c *sockjs.Conn) { c.Close() }
 
 	mux.Handle(echoHandler)
