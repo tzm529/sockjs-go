@@ -6,6 +6,7 @@ import (
 )
 
 var reInfo = regexp.MustCompile("/info$")
+var reIframe = regexp.MustCompile(`/iframe[\w\d-\. ]*\.html$`)
 var reSessionUrl = regexp.MustCompile(
 	`/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|websocket|jsonp|jsonp_send)$`)
 
@@ -34,6 +35,8 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		handleInfo(w, r, s)
 	case method == "OPTIONS" && reInfo.MatchString(path):
 		handleInfoOptions(w, r)
+	case method == "GET" && reIframe.MatchString(path):
+		handleIframe(w, r, s)
 	case method == "GET" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
 		protocol := matches[2]
