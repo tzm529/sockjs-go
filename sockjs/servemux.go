@@ -7,7 +7,7 @@ import (
 
 var DefaultServeMux = NewServeMux(http.DefaultServeMux)
 
-func Handle(prefix string, hfunc func (*Session), c Config) {
+func Handle(prefix string, hfunc func(*Session), c Config) {
 	DefaultServeMux.Handle(prefix, hfunc, c)
 }
 
@@ -32,7 +32,7 @@ func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.ServeHTTP(w, r)
 }
 
-func (m *ServeMux) Handle(prefix string, hfunc func (*Session), c Config) {
+func (m *ServeMux) Handle(prefix string, hfunc func(*Session), c Config) {
 	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
 		panic("sockjs: prefix must not end with a slash")
 	}

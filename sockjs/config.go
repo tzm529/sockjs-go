@@ -1,8 +1,8 @@
 package sockjs
 
 import (
-	"fmt"
 	"crypto/md5"
+	"fmt"
 )
 
 type Config struct {

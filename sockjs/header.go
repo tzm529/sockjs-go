@@ -14,7 +14,6 @@ func addExpires(h http.Header) {
 	h.Add("Access-Control-Max-Age", fmt.Sprintf("%d", 365*24*60*60))
 }
 
-
 func addCors(h http.Header, r *http.Request) {
 	h.Add("Access-Control-Allow-Credentials", "true")
 	h.Add("Access-Control-Allow-Origin", getOriginHeader(r))

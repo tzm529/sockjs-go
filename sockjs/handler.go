@@ -13,11 +13,11 @@ var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
 type Handler struct {
 	prefix string
-	hfunc func (*Session)
+	hfunc  func(*Session)
 	config Config
 }
 
-func newHandler(prefix string, hfunc func (*Session), c Config) (h *Handler) {
+func newHandler(prefix string, hfunc func(*Session), c Config) (h *Handler) {
 	h = new(Handler)
 	h.prefix = prefix
 	h.hfunc = hfunc

@@ -49,7 +49,7 @@ func receiveWebsocket(s *Session) (string, error) {
 
 	if len(messages) > 1 {
 		// push the leftover messages to the queue
-		for _, v  := range messages[1:] {
+		for _, v := range messages[1:] {
 			s.push(v)
 		}
 	}

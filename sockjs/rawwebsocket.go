@@ -5,7 +5,6 @@ import (
 	"net/http"
 )
 
-
 func handleRawWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 	h := websocket.Handler(func(ws *websocket.Conn) {
 		session := new(Session)
@@ -23,7 +22,7 @@ func receiveRawWebsocket(s *Session) (string, error) {
 	if err != nil {
 		return "", err
 	}
- 	return data, nil
+	return data, nil
 }
 
 func sendRawWebsocket(s *Session, m string) (err error) {

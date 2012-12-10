@@ -1,16 +1,16 @@
 package sockjs
 
 import (
-	"net/http"
-	"math/rand"
 	"encoding/json"
+	"math/rand"
+	"net/http"
 )
 
 type infoData struct {
 	Websocket    bool     `json:"websocket"`
 	CookieNeeded bool     `json:"cookie_needed"`
 	Origins      []string `json:"origins"`
-	Entropy      uint32    `json:"entropy"`
+	Entropy      uint32   `json:"entropy"`
 }
 
 func newInfoData(ws bool) infoData {
@@ -28,7 +28,9 @@ func handleInfo(w http.ResponseWriter, r *http.Request, s *Handler) {
 	addContentTypeWithoutCache(h, "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	json, err := json.Marshal(newInfoData(s.config.Websocket))
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	w.Write(json)
 }
 

@@ -1,10 +1,10 @@
 package sockjs
 
-import(
+import (
 	"code.google.com/p/go.net/websocket"
+	"container/list"
 	"errors"
-"container/list"
-"sync"
+	"sync"
 )
 
 type sessionKind uint8
@@ -15,28 +15,11 @@ const (
 )
 
 type Session struct {
-	kind sessionKind
+	kind   sessionKind
 	closed bool
-	queue list.List // message queue
-	mu sync.Mutex // lock for message queue
-	ws *websocket.Conn
-}
-
-// pull a message from the message queue
-func (s *Session) pull() *string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	e := s.queue.Front()
-	if e == nil { return nil }
-	m, _ := s.queue.Remove(e).(string)
-	return &m
-}
-
-// push a message to the message queue
-func (s *Session) push(m string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.queue.PushBack(m)
+	queue  list.List  // message queue
+	mu     sync.Mutex // lock for message queue
+	ws     *websocket.Conn
 }
 
 func (s *Session) Receive() (m string, err error) {
@@ -49,7 +32,7 @@ func (s *Session) Receive() (m string, err error) {
 		if s.closed {
 			return "", errors.New("connection closed")
 		}
-		
+
 		switch s.kind {
 		case sessionKindWebsocket:
 			m, err = receiveWebsocket(s)
@@ -57,7 +40,7 @@ func (s *Session) Receive() (m string, err error) {
 			m, err = receiveRawWebsocket(s)
 		}
 	}
-	return 
+	return
 }
 
 func (s *Session) Send(m string) (err error) {
@@ -71,7 +54,7 @@ func (s *Session) Send(m string) (err error) {
 	case sessionKindRawWebsocket:
 		err = sendRawWebsocket(s, m)
 	}
-	return 
+	return
 }
 
 func (s *Session) Close() (err error) {
@@ -83,4 +66,23 @@ func (s *Session) Close() (err error) {
 	}
 	s.closed = true
 	return
+}
+
+// pull a message from the message queue
+func (s *Session) pull() *string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e := s.queue.Front()
+	if e == nil {
+		return nil
+	}
+	m, _ := s.queue.Remove(e).(string)
+	return &m
+}
+
+// push a message to the message queue
+func (s *Session) push(m string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.queue.PushBack(m)
 }
