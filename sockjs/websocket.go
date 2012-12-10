@@ -1,6 +1,7 @@
 package sockjs
 
 import (
+	"io"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 	h := websocket.Handler(func(ws *websocket.Conn) {
 		var messages []string
+		var data []byte
 
 		// initiate connection
 		_, err := ws.Write([]byte{'o'})
@@ -16,18 +18,26 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 			return
 		}
 
-		conn := newConn(ws)
+		conn := new(Conn)
+		conn.kind = connKindWebsocket
+		conn.wc = ws
 		if s.OnOpen != nil { s.OnOpen(conn) }
 
 		// Read messages until we get some error, like connection closed.
 		for {
-			if err = websocket.JSON.Receive(ws, &messages); err != nil {
-				// ignore empty frames
-				if jsonerr, ok := err.(*json.SyntaxError); ok && jsonerr.Offset == 0 {
+			err = websocket.Message.Receive(ws, &data) 
+			if err != nil {
+				break
+			}
+
+			// ignore empty frames
+			if len(data) == 0 {
 					continue
-				} else {
-					break
-				}
+			}
+
+			err = json.Unmarshal(data, &messages)
+			if err != nil {
+				break
 			}
 
 			if s.OnMessage != nil {
@@ -43,3 +53,15 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 
 	h.ServeHTTP(w, r)
 }
+
+func sendWebsocket(w io.Writer, s string) (err error) {
+	_, err = w.Write(aframe(s))
+	return
+}
+
+func closeWebsocket(wc io.WriteCloser) error {
+	wc.Write([]byte(`c[3000,"Go away!"]`))
+	return wc.Close()
+}
+
+

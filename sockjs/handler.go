@@ -5,10 +5,11 @@ import (
 	"regexp"
 )
 
-var reInfo = regexp.MustCompile("/info$")
-var reIframe = regexp.MustCompile(`/iframe[\w\d-\. ]*\.html$`)
+var reInfo = regexp.MustCompile(`^/info$`)
+var reIframe = regexp.MustCompile(`^/iframe[\w\d-\. ]*\.html$`)
 var reSessionUrl = regexp.MustCompile(
-	`/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|websocket|jsonp|jsonp_send)$`)
+	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|websocket|jsonp|jsonp_send)$`)
+var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
 type Handler struct {
 	OnOpen func(*Conn)
@@ -24,12 +25,12 @@ func NewHandler(c Config) (h *Handler) {
 }
 
 func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
+	path := r.URL.Path[len(s.config.Prefix):]
 	method := r.Method
 	println("ServeHTTP:", path, method)
 
 	switch {
-	case method == "GET" && path == s.config.Prefix || path == s.config.Prefix+"/":
+	case method == "GET" && path == "" || path == "/":
 		handleGreeting(w)
 	case method == "GET" && reInfo.MatchString(path):
 		handleInfo(w, r, s)
@@ -44,6 +45,8 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			handleWebsocket(w, r, s)
 		}
+	case method == "GET" && reRawWebsocket.MatchString(path):
+		handleRawWebsocket(w, r, s)
 	default:
 		http.NotFound(w, r)
 	}
