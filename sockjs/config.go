@@ -7,7 +7,6 @@ import (
 
 type Config struct {
 	SockjsURL       string
-	Prefix          string
 	ResponseLimit   int
 	Websocket       bool
 	HeartbeatDelay  int

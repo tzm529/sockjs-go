@@ -12,20 +12,21 @@ var reSessionUrl = regexp.MustCompile(
 var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
 type Handler struct {
-	OnOpen func(*Conn)
-	OnMessage func(*Conn, string)
-	OnClose func(*Conn)
+	prefix string
+	hfunc func (*Session)
 	config Config
 }
 
-func NewHandler(c Config) (h *Handler) {
+func newHandler(prefix string, hfunc func (*Session), c Config) (h *Handler) {
 	h = new(Handler)
+	h.prefix = prefix
+	h.hfunc = hfunc
 	h.config = c
 	return h
 }
 
-func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[len(s.config.Prefix):]
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path[len(h.prefix):]
 	method := r.Method
 	println("ServeHTTP:", path, method)
 
@@ -33,20 +34,20 @@ func (s *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case method == "GET" && path == "" || path == "/":
 		handleGreeting(w)
 	case method == "GET" && reInfo.MatchString(path):
-		handleInfo(w, r, s)
+		handleInfo(w, r, h)
 	case method == "OPTIONS" && reInfo.MatchString(path):
 		handleInfoOptions(w, r)
 	case method == "GET" && reIframe.MatchString(path):
-		handleIframe(w, r, s)
+		handleIframe(w, r, h)
 	case method == "GET" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
 		protocol := matches[2]
 		switch protocol {
 		case "websocket":
-			handleWebsocket(w, r, s)
+			handleWebsocket(w, r, h)
 		}
 	case method == "GET" && reRawWebsocket.MatchString(path):
-		handleRawWebsocket(w, r, s)
+		handleRawWebsocket(w, r, h)
 	default:
 		http.NotFound(w, r)
 	}

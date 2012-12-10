@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+var DefaultServeMux = NewServeMux(http.DefaultServeMux)
+
+func Handle(prefix string, hfunc func (*Session), c Config) {
+	DefaultServeMux.Handle(prefix, hfunc, c)
+}
+
 // ServeMux is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
 // but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-sockjs paths.
@@ -26,14 +32,15 @@ func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.ServeHTTP(w, r)
 }
 
-func (m *ServeMux) Handle(handler *Handler) {
-	prefix := handler.config.Prefix
+func (m *ServeMux) Handle(prefix string, hfunc func (*Session), c Config) {
 	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
 		panic("sockjs: prefix must not end with a slash")
 	}
 	if _, ok := m.m[prefix]; ok {
 		panic("sockjs: multiple registrations for " + prefix)
 	}
+
+	handler := newHandler(prefix, hfunc, c)
 
 	m.mu.Lock()
 	m.m[prefix] = handler
