@@ -23,18 +23,18 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 	h.ServeHTTP(w, r)
 }
 
-func receiveWebsocket(ws *websocket.Conn) (string, error) {
+func receiveWebsocket(s *Session) (string, error) {
 	var messages []string
 	var data []byte
 
-	err := websocket.Message.Receive(ws, &data)
+	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		return "", err
 	}
 
 	// ignore empty frames
 	if len(data) == 0 {
-		return receiveWebsocket(ws)
+		return receiveWebsocket(s)
 	}
 
 	err = json.Unmarshal(data, &messages)
@@ -44,22 +44,25 @@ func receiveWebsocket(ws *websocket.Conn) (string, error) {
 
 	// ignore empty messages
 	if len(messages) == 0 {
-		return receiveWebsocket(ws)
+		return receiveWebsocket(s)
 	}
 
 	if len(messages) > 1 {
-		println("YLIYKS")
+		// push the leftover messages to the queue
+		for _, v  := range messages[1:] {
+			s.push(v)
+		}
 	}
 
 	return messages[0], nil
 }
 
-func sendWebsocket(ws *websocket.Conn, s string) (err error) {
-	_, err = ws.Write(aframe(s))
+func sendWebsocket(s *Session, m string) (err error) {
+	_, err = s.ws.Write(aframe(m))
 	return
 }
 
-func closeWebsocket(ws *websocket.Conn) error {
-	ws.Write([]byte(`c[3000,"Go away!"]`))
-	return ws.Close()
+func closeWebsocket(s *Session) error {
+	s.ws.Write([]byte(`c[3000,"Go away!"]`))
+	return s.ws.Close()
 }

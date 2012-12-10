@@ -17,22 +17,20 @@ func handleRawWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 	h.ServeHTTP(w, r)
 }
 
-func receiveRawWebsocket(ws *websocket.Conn) (string, error) {
+func receiveRawWebsocket(s *Session) (string, error) {
 	var data string
-	err := websocket.Message.Receive(ws, &data)
+	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		return "", err
 	}
  	return data, nil
 }
 
-
-func sendRawWebsocket(ws *websocket.Conn, s string) (err error) {
-	_, err = ws.Write([]byte(s))
+func sendRawWebsocket(s *Session, m string) (err error) {
+	_, err = s.ws.Write([]byte(m))
 	return
 }
 
-func closeRawWebsocket(ws *websocket.Conn) error {
-	ws.Write([]byte("Go away!"))
-	return ws.Close()
+func closeRawWebsocket(s *Session) error {
+	return s.ws.Close()
 }
