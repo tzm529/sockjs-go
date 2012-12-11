@@ -11,7 +11,7 @@ import (
 
 type protoWebsocket struct { 
 	ws *websocket.Conn
-	*queue
+	q *queue
 }
 
 func (p protoWebsocket) Receive() ([]byte, error) {
@@ -40,10 +40,10 @@ func (p protoWebsocket) Receive() ([]byte, error) {
 	}
 
 	for _, v := range messages {
-		p.push([]byte(v))
+		p.q.push([]byte(v))
 	}
 
-	return p.pull(), nil
+	return p.q.pull()
 }
 
 func (p protoWebsocket) Send(m []byte) (err error) {
@@ -52,6 +52,7 @@ func (p protoWebsocket) Send(m []byte) (err error) {
 }
 
 func (p protoWebsocket) Close() error {
+	p.q.close()
 	p.ws.Write([]byte(`c[3000,"Go away!"]`))
 	return p.ws.Close()
 }
