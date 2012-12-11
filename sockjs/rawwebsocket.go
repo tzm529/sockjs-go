@@ -19,7 +19,7 @@ func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 	wh.ServeHTTP(w, r)
 }
 
-type protoRawWebsocket struct { *websocket.Conn }
+type protoRawWebsocket struct { ws *websocket.Conn }
 
 func (p protoRawWebsocket) Receive() (data []byte, err error) {
 	err = websocket.Message.Receive(p.Conn, &data)
@@ -30,11 +30,11 @@ func (p protoRawWebsocket) Receive() (data []byte, err error) {
 }
 
 func (p protoRawWebsocket) Send(m []byte) (err error) {
-	_, err = p.Conn.Write(m)
+	_, err = p.ws.Write(m)
 	return
 }
 
 func (p protoRawWebsocket) Close() error {
-	return p.Conn.Close()
+	return p.ws.Close()
 }
 

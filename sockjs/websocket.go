@@ -67,7 +67,7 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 type protoWebsocket struct { 
-	*websocket.Conn
+	ws *websocket.Conn
 	*queue
 }
 
@@ -113,11 +113,11 @@ func (p protoWebsocket) Receive() ([]byte, error) {
 }
 
 func (p protoWebsocket) Send(m []byte) (err error) {
-	_, err = p.Conn.Write(aframe(m))
+	_, err = p.ws.Write(aframe(m))
 	return
 }
 
 func (p protoWebsocket) Close() error {
-	p.Conn.Write([]byte(`c[3000,"Go away!"]`))
-	return p.Conn.Close()
+	p.ws.Write([]byte(`c[3000,"Go away!"]`))
+	return p.ws.Close()
 }
