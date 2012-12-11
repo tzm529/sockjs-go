@@ -8,12 +8,14 @@ import (
 
 func echoHandler(s *sockjs.Session) {
 	fmt.Println("session opened")
+	
 	for {
 		m, err := s.Receive()
 		if err != nil {
+			println("ERR:",err.Error())
 			break
 		}
-		fmt.Println("Received:", m)
+		fmt.Println("Received:", string(m))
 		s.Send(m)
 	}
 	fmt.Println("session closing")

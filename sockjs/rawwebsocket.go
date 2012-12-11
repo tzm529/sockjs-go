@@ -5,28 +5,32 @@ import (
 	"net/http"
 )
 
-func handleRawWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
-	h := websocket.Handler(func(ws *websocket.Conn) {
+func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
+	if !h.config.Websocket {
+		http.NotFound(w, r)
+		return
+	}
+
+	wh := websocket.Handler(func(ws *websocket.Conn) {
 		session := new(Session)
-		session.kind = sessionKindRawWebsocket
+		session.proto = protocolRawWebsocket
 		session.ws = ws
-		s.hfunc(session)
+		h.hfunc(session)
 	})
 
-	h.ServeHTTP(w, r)
+	wh.ServeHTTP(w, r)
 }
 
-func receiveRawWebsocket(s *Session) (string, error) {
-	var data string
-	err := websocket.Message.Receive(s.ws, &data)
+func receiveRawWebsocket(s *Session) (data []byte, err error) {
+	err = websocket.Message.Receive(s.ws, &data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return data, nil
 }
 
-func sendRawWebsocket(s *Session, m string) (err error) {
-	_, err = s.ws.Write([]byte(m))
+func sendRawWebsocket(s *Session, m []byte) (err error) {
+	_, err = s.ws.Write(m)
 	return
 }
 

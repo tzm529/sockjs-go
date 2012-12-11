@@ -23,15 +23,15 @@ const (
 </html>`
 )
 
-func handleIframe(w http.ResponseWriter, r *http.Request, s *Handler) {
-	if r.Header.Get("If-None-Match") == s.config.iframeHash {
+func handleIframe(h *Handler, w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("If-None-Match") == h.config.iframeHash {
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
 
-	h := w.Header()
-	addContentTypeWithoutCache(h, "text/html; charset=UTF-8")
-	addExpires(h)
-	h.Add("ETag", s.config.iframeHash)
-	w.Write(s.config.iframePage)
+	header := w.Header()
+	addContentTypeWithoutCache(header, "text/html; charset=UTF-8")
+	addExpires(header)
+	header.Add("ETag", h.config.iframeHash)
+	w.Write(h.config.iframePage)
 }

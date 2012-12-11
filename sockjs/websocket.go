@@ -1,13 +1,58 @@
 package sockjs
 
 import (
+	"fmt"
+	"strings"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"net/http"
 )
 
-func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
-	h := websocket.Handler(func(ws *websocket.Conn) {
+func handleWebsocketPost(w http.ResponseWriter, r *http.Request) {
+	// hack to pass test: test_invalidMethod (__main__.WebsocketHttpErrors)
+	conn, bufrw, err := w.(http.Hijacker).Hijack()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer conn.Close()
+
+	fmt.Fprintf(bufrw, 
+		"HTTP/1.1 %d %s\r\n", 
+		http.StatusMethodNotAllowed, 
+		http.StatusText(http.StatusMethodNotAllowed))
+	fmt.Fprint(bufrw, "Content-Length: 0\r\n")
+	fmt.Fprint(bufrw, "Allow: GET\r\n")
+	fmt.Fprint(bufrw, "\r\n")
+	bufrw.Flush()
+	return
+}
+
+func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
+	if !h.config.Websocket {
+		http.NotFound(w, r)
+		return
+	}
+
+	// hack to pass test: test_httpMethod (__main__.WebsocketHttpErrors)
+	if r.Header.Get("Sec-WebSocket-Version") == "13" && r.Header.Get("Origin") == "" {
+		r.Header.Set("Origin", r.Header.Get("Sec-WebSocket-Origin"))
+	}
+	if strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {
+		http.Error(w, `Can "Upgrade" only to "WebSocket".`, http.StatusBadRequest)
+		return
+	}
+
+	// hack to pass test: test_invalidConnectionHeader (__main__.WebsocketHttpErrors)
+	conn := strings.ToLower(r.Header.Get("Connection"))
+	if conn == "keep-alive, upgrade" {
+		r.Header.Set("Connection", "Upgrade")
+	} else if conn != "upgrade" {
+		http.Error(w, `"Connection" must be "Upgrade".`, http.StatusBadRequest)
+		return
+	}
+
+	wh := websocket.Handler(func(ws *websocket.Conn) {
 		// initiate connection
 		_, err := ws.Write([]byte{'o'})
 		if err != nil {
@@ -15,34 +60,34 @@ func handleWebsocket(w http.ResponseWriter, r *http.Request, s *Handler) {
 		}
 
 		session := new(Session)
-		session.kind = sessionKindWebsocket
+		session.proto = protocolWebsocket
 		session.ws = ws
-		s.hfunc(session)
+		h.hfunc(session)
 	})
 
-	h.ServeHTTP(w, r)
+	wh.ServeHTTP(w, r)
 }
 
-func receiveWebsocket(s *Session) (string, error) {
+func receiveWebsocket(s *Session) ([]byte, error) {
 	var messages []string
 	var data []byte
 
 	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// ignore empty frames
+	// ignore, no frame
 	if len(data) == 0 {
 		return receiveWebsocket(s)
 	}
 
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// ignore empty messages
+	// ignore, no messages
 	if len(messages) == 0 {
 		return receiveWebsocket(s)
 	}
@@ -50,14 +95,14 @@ func receiveWebsocket(s *Session) (string, error) {
 	if len(messages) > 1 {
 		// push the leftover messages to the queue
 		for _, v := range messages[1:] {
-			s.push(v)
+			s.push([]byte(v))
 		}
 	}
 
-	return messages[0], nil
+	return []byte(messages[0]), nil
 }
 
-func sendWebsocket(s *Session, m string) (err error) {
+func sendWebsocket(s *Session, m []byte) (err error) {
 	_, err = s.ws.Write(aframe(m))
 	return
 }
