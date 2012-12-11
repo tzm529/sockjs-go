@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func echoHandler(s *sockjs.Session) {
+func echoHandler(s sockjs.Session) {
 	fmt.Println("session opened")
 	
 	for {
@@ -29,7 +29,7 @@ func main() {
 	sockjs.Handle("/echo", echoHandler, sockjs.NewConfig())
 	sockjs.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
 	sockjs.Handle("/close",
-		func(s *sockjs.Session) { s.Close() },
+		func(s sockjs.Session) { s.Close() },
 		sockjs.NewConfig())
 	err := http.ListenAndServe(":8081", sockjs.DefaultServeMux)
 	if err != nil {

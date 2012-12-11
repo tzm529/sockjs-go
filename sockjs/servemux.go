@@ -7,7 +7,7 @@ import (
 
 var DefaultServeMux = NewServeMux(http.DefaultServeMux)
 
-func Handle(prefix string, hfunc func(*Session), c Config) {
+func Handle(prefix string, hfunc func(Session), c Config) {
 	DefaultServeMux.Handle(prefix, hfunc, c)
 }
 
@@ -15,7 +15,7 @@ func Handle(prefix string, hfunc func(*Session), c Config) {
 // but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-sockjs paths.
 type ServeMux struct {
-	mu  sync.RWMutex
+	sync.RWMutex
 	m   map[string]http.Handler
 	alt http.Handler
 }
@@ -32,7 +32,7 @@ func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.ServeHTTP(w, r)
 }
 
-func (m *ServeMux) Handle(prefix string, hfunc func(*Session), c Config) {
+func (m *ServeMux) Handle(prefix string, hfunc func(Session), c Config) {
 	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
 		panic("sockjs: prefix must not end with a slash")
 	}
@@ -42,9 +42,9 @@ func (m *ServeMux) Handle(prefix string, hfunc func(*Session), c Config) {
 
 	handler := newHandler(prefix, hfunc, c)
 
-	m.mu.Lock()
+	m.Lock()
 	m.m[prefix] = handler
-	m.mu.Unlock()
+	m.Unlock()
 }
 
 // Does path match prefix?
@@ -57,8 +57,8 @@ func pathMatch(prefix, path string) bool {
 // If no handler is found, return the alternate handler or http.NotFoundHandler().
 func (m *ServeMux) match(path string) (h http.Handler) {
 	var n = 0
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.RLock()
+	defer m.RUnlock()
 	for k, v := range m.m {
 		if !pathMatch(k, path) {
 			continue
