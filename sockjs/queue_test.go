@@ -15,15 +15,11 @@ func (s *QueueSuite) SetUpTest(c *C) {
 }
 
 func (s *QueueSuite) TestQueue(c *C) {
-	c.Check(s.q.pull(), IsNil)
-
 	s.q.push([]byte{'a'})
 	s.q.push([]byte{'b'})
 	s.q.push([]byte{'c'})
-
 	c.Check(s.q.pull(), DeepEquals, []byte{'a'})
 	c.Check(s.q.pull(), DeepEquals, []byte{'b'})
 	c.Check(s.q.pull(), DeepEquals, []byte{'c'})
-	c.Check(s.q.pull(), IsNil)
 }
 
