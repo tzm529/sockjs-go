@@ -3,16 +3,11 @@ package sockjs
 import (
 	. "launchpad.net/gocheck"
 	"net/http"
-	"testing"
 )
-
-func Test(t *testing.T) {
-	TestingT(t)
-}
 
 type ServeMuxSuite struct{}
 
-var _ = Suite(&ServerMuxSuite{})
+var _ = Suite(&ServeMuxSuite{})
 
 type nopHandler int
 
