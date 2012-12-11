@@ -6,26 +6,54 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"net/http"
+
 )
 
-func handleWebsocketPost(w http.ResponseWriter, r *http.Request) {
-	// hack to pass test: test_invalidMethod (__main__.WebsocketHttpErrors)
-	conn, bufrw, err := w.(http.Hijacker).Hijack()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close()
+type protoWebsocket struct { 
+	ws *websocket.Conn
+	*queue
+}
 
-	fmt.Fprintf(bufrw, 
-		"HTTP/1.1 %d %s\r\n", 
-		http.StatusMethodNotAllowed, 
-		http.StatusText(http.StatusMethodNotAllowed))
-	fmt.Fprint(bufrw, "Content-Length: 0\r\n")
-	fmt.Fprint(bufrw, "Allow: GET\r\n")
-	fmt.Fprint(bufrw, "\r\n")
-	bufrw.Flush()
+func (p protoWebsocket) Receive() ([]byte, error) {
+	var messages []string
+	var data []byte
+
+	//* read some messages to the queue and pull the first one
+	err := websocket.Message.Receive(p.ws, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	// ignore, no frame
+	if len(data) == 0 {
+		return p.Receive()
+	}
+
+	err = json.Unmarshal(data, &messages)
+	if err != nil {
+		return nil, err
+	}
+
+	// ignore, no messages
+	if len(messages) == 0 {
+		return p.Receive()
+	}
+
+	for _, v := range messages {
+		p.push([]byte(v))
+	}
+
+	return p.pull(), nil
+}
+
+func (p protoWebsocket) Send(m []byte) (err error) {
+	_, err = p.ws.Write(aframe(m))
 	return
+}
+
+func (p protoWebsocket) Close() error {
+	p.ws.Write([]byte(`c[3000,"Go away!"]`))
+	return p.ws.Close()
 }
 
 func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -66,58 +94,22 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 	wh.ServeHTTP(w, r)
 }
 
-type protoWebsocket struct { 
-	ws *websocket.Conn
-	*queue
-}
-
-func (p protoWebsocket) Receive() ([]byte, error) {
-	pm := p.pull()
-	if pm != nil {
-		// receive from queue
-		return pm, nil
-	}
-	
-	// receive from connection
-	var messages []string
-	var data []byte
-
-	err := websocket.Message.Receive(p.Conn, &data)
+func handleWebsocketPost(w http.ResponseWriter, r *http.Request) {
+	// hack to pass test: test_invalidMethod (__main__.WebsocketHttpErrors)
+	conn, bufrw, err := w.(http.Hijacker).Hijack()
 	if err != nil {
-		return nil, err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	defer conn.Close()
 
-	// ignore, no frame
-	if len(data) == 0 {
-		return p.Receive()
-	}
-
-	err = json.Unmarshal(data, &messages)
-	if err != nil {
-		return nil, err
-	}
-
-	// ignore, no messages
-	if len(messages) == 0 {
-		return p.Receive()
-	}
-
-	if len(messages) > 1 {
-		// push the leftover messages to the queue
-		for _, v := range messages[1:] {
-			p.push([]byte(v))
-		}
-	}
-
-	return []byte(messages[0]), nil
-}
-
-func (p protoWebsocket) Send(m []byte) (err error) {
-	_, err = p.ws.Write(aframe(m))
+	fmt.Fprintf(bufrw, 
+		"HTTP/1.1 %d %s\r\n", 
+		http.StatusMethodNotAllowed, 
+		http.StatusText(http.StatusMethodNotAllowed))
+	fmt.Fprint(bufrw, "Content-Length: 0\r\n")
+	fmt.Fprint(bufrw, "Allow: GET\r\n")
+	fmt.Fprint(bufrw, "\r\n")
+	bufrw.Flush()
 	return
-}
-
-func (p protoWebsocket) Close() error {
-	p.ws.Write([]byte(`c[3000,"Go away!"]`))
-	return p.ws.Close()
 }

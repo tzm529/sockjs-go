@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// session pool
 type pool struct {
 	sync.RWMutex
 	pool map[string]Session
@@ -23,14 +24,14 @@ func (p *pool) get(sessid string) Session {
 
 func (p *pool) set(sessid string, s Session) {
 	p.Lock()
+	defer p.Unlock()
 	p.pool[sessid] = s
-	p.Unlock()
 }
 
 func (p *pool) remove(sessid string) (s Session) {
 	p.Lock()
+	defer p.Unlock()
 	s = p.pool[sessid]
 	delete(p.pool, sessid)
-	p.Unlock()
 	return
 }

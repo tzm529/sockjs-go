@@ -5,24 +5,10 @@ import (
 	"net/http"
 )
 
-func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
-	if !h.config.Websocket {
-		http.NotFound(w, r)
-		return
-	}
-
-	wh := websocket.Handler(func(ws *websocket.Conn) {
-		session := protoRawWebsocket{ws}
-		h.hfunc(session)
-	})
-
-	wh.ServeHTTP(w, r)
-}
-
 type protoRawWebsocket struct { ws *websocket.Conn }
 
 func (p protoRawWebsocket) Receive() (data []byte, err error) {
-	err = websocket.Message.Receive(p.Conn, &data)
+	err = websocket.Message.Receive(p.ws, &data)
 	if err != nil {
 		return nil, err
 	}
@@ -36,5 +22,19 @@ func (p protoRawWebsocket) Send(m []byte) (err error) {
 
 func (p protoRawWebsocket) Close() error {
 	return p.ws.Close()
+}
+
+func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
+	if !h.config.Websocket {
+		http.NotFound(w, r)
+		return
+	}
+
+	wh := websocket.Handler(func(ws *websocket.Conn) {
+		session := protoRawWebsocket{ws}
+		h.hfunc(session)
+	})
+
+	wh.ServeHTTP(w, r)
 }
 
