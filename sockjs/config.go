@@ -3,14 +3,15 @@ package sockjs
 import (
 	"crypto/md5"
 	"fmt"
+	"time"
 )
 
 type Config struct {
 	SockjsURL       string
 	ResponseLimit   int
 	Websocket       bool
-	HeartbeatDelay  int
-	DisconnectDelay int
+	HeartbeatDelay  time.Duration
+	DisconnectDelay time.Duration
 
 	// Iframe page
 	iframePage []byte
@@ -19,8 +20,10 @@ type Config struct {
 
 func NewConfig() (c Config) {
 	c.SockjsURL = "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
+	c.ResponseLimit = 131072 // 128K
 	c.Websocket = true
-	c.ResponseLimit = 4096
+	c.HeartbeatDelay = time.Duration(25)*time.Second
+	c.DisconnectDelay = time.Duration(5)*time.Second
 
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()
