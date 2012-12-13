@@ -3,9 +3,12 @@ package sockjs
 import (
 	"container/list"
 	"sync"
+	"errors"
 )
 
-// Message queue
+var errQueueClosed error = errors.New("queue is closed")
+
+// Infinite message queue
 type queue struct {
 	*list.List  
 	sync.Mutex
@@ -20,40 +23,37 @@ func newQueue() (q *queue) {
 	return
 }
 
-// Returns a message from the message queue or an error,
-// if queue is closed. Blocks, if queue is empty.
-func (q *queue) pull() ([]byte, error) {
+// Pull returns a message from the message queue or nil, if the queue is closed. 
+// Blocks, if queue is empty.
+func (q *queue) pull() []byte {
 	q.Lock()
 	defer q.Unlock()
-
-	if q.closed { return nil, ErrSessionClosed }
-
-	if q.Len() == 0 {
-		q.Wait()
+	for q.Len() == 0 { 
+		if !q.closed { 
+			q.Wait()
+		} else {
+			return nil
+		}
 	}
-
-	if q.closed { return nil, ErrSessionClosed }
 	m, _ := q.Remove(q.Front()).([]byte)
-	return m, nil
+	return m
 }
 
-// Pushes a message to the message queue or returns an error,
-// if queue is closed.
-func (q *queue) push(m []byte) error {
+// Push pushes a message to the message queue.
+// Panics, if the queue is closed.
+func (q *queue) push(m []byte) {
 	q.Lock()
 	defer q.Unlock()
-
-	if q.closed { return ErrSessionClosed }
+	if q.closed { panic(errQueueClosed) }
 	q.PushBack(m)
 	q.Signal()
-	return nil
 }
 
-// Closes the message queue by waking up every goroutine blocking on pull().
+// Close empties the queue, marks it closed and wakes up remaining goroutines waiting on pull().
 func (q *queue) close() {
 	q.Lock()
 	defer q.Unlock()
-
-	q.Broadcast()
+	q.Init()
 	q.closed = true
+	q.Broadcast()
 }

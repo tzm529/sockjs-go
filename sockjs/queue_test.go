@@ -22,28 +22,16 @@ func (s *QueueSuite) TestQueue(c *C) {
 	s.q.push([]byte{'a'})
 	s.q.push([]byte{'b'})
 	s.q.push([]byte{'c'})
-
-	v, err := s.q.pull()
-	c.Check(v, DeepEquals, []byte{'a'})
-	c.Check(err, IsNil)
-
-	v, err = s.q.pull()
-	c.Check(v, DeepEquals, []byte{'b'})
-	c.Check(err, IsNil)
-
-	v, err = s.q.pull()
-	c.Check(v, DeepEquals, []byte{'c'})
-	c.Check(err, IsNil)
+	c.Assert(s.q.pull(), DeepEquals, []byte{'a'})
+	c.Assert(s.q.pull(), DeepEquals, []byte{'b'})
+	c.Assert(s.q.pull(), DeepEquals, []byte{'c'})
 }
 
 func (s *QueueSuite) TestQueueClose(c *C) {
 	s.q.push([]byte{'a'})
 	s.q.close()
 
-	err := s.q.push([]byte{'b'})
-	c.Check(err, Equals, ErrSessionClosed)
-
-	_, err = s.q.pull()
-	c.Check(err, Equals, ErrSessionClosed)	
+	c.Assert(func() { s.q.push([]byte{'b'}) }, Panics, errQueueClosed)
+	c.Check(s.q.pull(), IsNil)
 }
 
