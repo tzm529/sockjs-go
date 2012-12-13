@@ -24,30 +24,28 @@ func (p protoWebsocket) Receive() ([]byte, error) {
 		return nil, err
 	}
 
+	println("AA")
 	// ignore, no frame
 	if len(data) == 0 {
 		return p.Receive()
 	}
-
+	println("BB")
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
 		return nil, err
 	}
 
-	// ignore, no messages
-	if len(messages) == 0 {
-		return p.Receive()
-	}
-
+	println("CC")
 	for _, v := range messages {
 		p.q.push([]byte(v))
 	}
-
-	return p.q.pull()
+	println("DD")
+	defer println("GG")
+	return p.q.pull(), nil
 }
 
 func (p protoWebsocket) Send(m []byte) (err error) {
-	_, err = p.ws.Write(aframe(m))
+	_, err = p.ws.Write(frame("a", "", m))
 	return
 }
 

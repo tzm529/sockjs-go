@@ -24,8 +24,9 @@ func newInfoData(ws bool) infoData {
 
 func handleInfo(h *Handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	addCors(header, r)
-	addContentTypeWithoutCache(header, "application/json; charset=UTF-8")
+	header.Add("Content-Type", "application/json; charset=UTF-8")
+	disableCache(header)
+	cors(header, r)
 	w.WriteHeader(http.StatusOK)
 	json, err := json.Marshal(newInfoData(h.config.Websocket))
 	if err != nil {
@@ -36,7 +37,7 @@ func handleInfo(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 func handleInfoOptions(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	addCorsAllowMethods(header, r, "OPTIONS, GET")
-	addExpires(header)
+	corsAllowMethods(header, r, "OPTIONS, GET")
+	expires(header)
 	w.WriteHeader(http.StatusNoContent)
 }
