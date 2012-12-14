@@ -18,7 +18,7 @@ func (s *QueueSuite) TearDownTest(c *C) {
 	s.q.close()
 }
 
-func (s *QueueSuite) TestQueue(c *C) {
+func (s *QueueSuite) TestPull(c *C) {
 	s.q.push([]byte{'a'})
 	s.q.push([]byte{'b'})
 	s.q.push([]byte{'c'})
@@ -27,7 +27,17 @@ func (s *QueueSuite) TestQueue(c *C) {
 	c.Assert(s.q.pull(), DeepEquals, []byte{'c'})
 }
 
-func (s *QueueSuite) TestQueueClose(c *C) {
+func (s *QueueSuite) TestPullAll(c *C) {
+	s.q.push([]byte{'a'})
+	s.q.push([]byte{'b'})
+	s.q.push([]byte{'c'})
+	c.Assert(s.q.pullAll(), DeepEquals, [][]byte{
+		[]byte{'a'},
+		[]byte{'b'},
+		[]byte{'c'}})
+}
+
+func (s *QueueSuite) TestClose(c *C) {
 	s.q.push([]byte{'a'})
 	s.q.close()
 

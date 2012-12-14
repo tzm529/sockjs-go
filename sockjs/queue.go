@@ -39,6 +39,25 @@ func (q *queue) pull() []byte {
 	return m
 }
 
+// PullAll returns all messages from the message queue or nil, if the queue is closed. 
+// Blocks, if queue is empty.
+func (q *queue) pullAll() [][]byte {
+	q.Lock()
+	defer q.Unlock()
+	for q.Len() == 0 { 
+		if !q.closed { 
+			q.Wait()
+		} else {
+			return nil
+		}
+	}
+	elems := make([][]byte, q.Len())
+	for e, i := q.Front(), 0; e != nil; e, i = q.Front(), i+1 {
+		elems[i], _ = q.Remove(e).([]byte)
+	}
+	return elems
+}
+
 // Push pushes a message to the message queue.
 // Panics, if the queue is closed.
 func (q *queue) push(m []byte) {
@@ -49,7 +68,7 @@ func (q *queue) push(m []byte) {
 	q.Signal()
 }
 
-// Close empties the queue, marks it closed and wakes up remaining goroutines waiting on pull().
+// Close empties the queue, marks it closed and wakes up remaining goroutines waiting on pull.
 func (q *queue) close() {
 	q.Lock()
 	defer q.Unlock()
