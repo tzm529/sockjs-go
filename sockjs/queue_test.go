@@ -10,38 +10,76 @@ type QueueSuite struct{
 
 var _ = Suite(&QueueSuite{})
 
-func (s *QueueSuite) SetUpTest(c *C) {
-	s.q = newQueue()
-}
-
-func (s *QueueSuite) TearDownTest(c *C) {
-	s.q.close()
-}
-
 func (s *QueueSuite) TestPull(c *C) {
-	s.q.push([]byte{'a'})
-	s.q.push([]byte{'b'})
-	s.q.push([]byte{'c'})
-	c.Assert(s.q.pull(), DeepEquals, []byte{'a'})
-	c.Assert(s.q.pull(), DeepEquals, []byte{'b'})
-	c.Assert(s.q.pull(), DeepEquals, []byte{'c'})
+	s.q = newQueue(false)
+	defer s.q.Close()
+
+	s.q.Push([]byte{'a'})
+	s.q.Push([]byte{'b'})
+	s.q.Push([]byte{'c'})
+
+	v, err := s.q.Pull()
+	c.Assert(err, IsNil)
+	c.Assert(v, DeepEquals, []byte{'a'})
+
+	v, err = s.q.Pull()
+	c.Assert(err, IsNil)
+	c.Assert(v, DeepEquals, []byte{'b'})
+
+	v, err = s.q.Pull()
+	c.Assert(err, IsNil)
+	c.Assert(v, DeepEquals, []byte{'c'})
 }
 
 func (s *QueueSuite) TestPullAll(c *C) {
-	s.q.push([]byte{'a'})
-	s.q.push([]byte{'b'})
-	s.q.push([]byte{'c'})
-	c.Assert(s.q.pullAll(), DeepEquals, [][]byte{
+	s.q = newQueue(false)
+	defer s.q.Close()
+
+	s.q.Push([]byte{'a'})
+	s.q.Push([]byte{'b'})
+	s.q.Push([]byte{'c'})
+	
+	v, err := s.q.PullAll()
+	c.Assert(err, IsNil)
+	c.Assert(v, DeepEquals, [][]byte{
 		[]byte{'a'},
 		[]byte{'b'},
 		[]byte{'c'}})
 }
 
-func (s *QueueSuite) TestClose(c *C) {
-	s.q.push([]byte{'a'})
-	s.q.close()
+func (s *QueueSuite) TestClosedPullError(c *C) {
+	s.q = newQueue(false)
+	defer s.q.Close()
 
-	c.Assert(func() { s.q.push([]byte{'b'}) }, Panics, errQueueClosed)
-	c.Check(s.q.pull(), IsNil)
+	s.q.Push([]byte{'a'})
+	s.q.Close()
+
+	_, err := s.q.Pull()
+	c.Assert(err, Equals, errQueueClosed)
+}
+
+func (s *QueueSuite) TestClosedPushPanic(c *C) {
+	s.q = newQueue(false)
+	defer s.q.Close()
+
+	s.q.Push([]byte{'a'})
+	s.q.Close()
+
+	c.Assert(func() { s.q.Push([]byte{'b'}) }, Panics, errQueueClosed)
+}
+
+func (s *QueueSuite) TestWaitPullError(c *C) {
+	s.q = newQueue(true)
+	defer s.q.Close()
+
+	f := func() {
+		_, err := s.q.Pull()
+		if !(err == errQueueClosed || err == errQueueWait) {
+			c.Fatal("wrong error value")
+		}
+	}
+
+	go f()
+	go f()
 }
 

@@ -31,7 +31,7 @@ func handleIframe(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 	header := w.Header()
 	header.Add("Content-Type", "text/html; charset=UTF-8")
-	expires(header)
+	enableCache(header)
 	header.Add("ETag", h.config.iframeHash)
 	w.Write(h.config.iframePage)
 }

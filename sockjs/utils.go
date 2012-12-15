@@ -2,14 +2,22 @@ package sockjs
 
 import (
 	"encoding/json"
-	
+	"net/http"
 )
 
-func aframe(messages ...[]byte) []byte {
+func frame(prefix string, suffix string, strings ...[]byte) (f []byte) {
 	var jsonin []string
-	for _, v := range messages {
+	f = append(f, []byte(prefix)...)
+	for _, v := range strings {
 		jsonin = append(jsonin, string(v))
 	}
 	s, _ := json.Marshal(&jsonin)
-	return append([]byte{'a'}, s...)
+	f = append(f, s...)
+	f = append(f, []byte(suffix)...)
+	return
+}
+
+func writeHttpClose(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`c[3000,"Go away!"]\n`))
 }

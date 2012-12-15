@@ -24,24 +24,22 @@ func (p protoWebsocket) Receive() ([]byte, error) {
 		return nil, err
 	}
 
-	println("AA")
 	// ignore, no frame
 	if len(data) == 0 {
 		return p.Receive()
 	}
-	println("BB")
+
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
 		return nil, err
 	}
 
-	println("CC")
+
 	for _, v := range messages {
-		p.q.push([]byte(v))
+		p.q.Push([]byte(v))
 	}
-	println("DD")
-	defer println("GG")
-	return p.q.pull(), nil
+
+	return p.q.Pull()
 }
 
 func (p protoWebsocket) Send(m []byte) (err error) {
@@ -50,7 +48,7 @@ func (p protoWebsocket) Send(m []byte) (err error) {
 }
 
 func (p protoWebsocket) Close() error {
-	p.q.close()
+	p.q.Close()
 	p.ws.Write([]byte(`c[3000,"Go away!"]`))
 	return p.ws.Close()
 }
@@ -83,10 +81,11 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 		// initiate connection
 		_, err := ws.Write([]byte{'o'})
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		session := protoWebsocket{ws, newQueue()}
+		session := protoWebsocket{ws, newQueue(false)}
 		h.hfunc(session)
 	})
 

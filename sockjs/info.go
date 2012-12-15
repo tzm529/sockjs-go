@@ -26,7 +26,7 @@ func handleInfo(h *Handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
 	header.Add("Content-Type", "application/json; charset=UTF-8")
 	disableCache(header)
-	cors(header, r)
+	preflight(header, r)
 	w.WriteHeader(http.StatusOK)
 	json, err := json.Marshal(newInfoData(h.config.Websocket))
 	if err != nil {
@@ -36,8 +36,9 @@ func handleInfo(h *Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleInfoOptions(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	corsAllowMethods(header, r, "OPTIONS, GET")
-	expires(header)
+	h := w.Header()
+	h.Add("Access-Control-Allow-Methods", "OPTIONS, GET")
+	preflight(h, r)
+	enableCache(h)
 	w.WriteHeader(http.StatusNoContent)
 }
