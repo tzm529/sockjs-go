@@ -28,10 +28,7 @@ func handleInfo(h *Handler, w http.ResponseWriter, r *http.Request) {
 	disableCache(header)
 	preflight(header, r)
 	w.WriteHeader(http.StatusOK)
-	json, err := json.Marshal(newInfoData(h.config.Websocket))
-	if err != nil {
-		panic(err)
-	}
+	json, _ := json.Marshal(newInfoData(h.config.Websocket))
 	w.Write(json)
 }
 

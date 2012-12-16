@@ -15,7 +15,7 @@ type Handler struct {
 	prefix string
 	hfunc  func(Session)
 	config Config
-	pool *sessionPool
+	pool *pool
 }
 
 func newHandler(prefix string, hfunc func(Session), c Config) (h *Handler) {
@@ -23,7 +23,7 @@ func newHandler(prefix string, hfunc func(Session), c Config) (h *Handler) {
 	h.prefix = prefix
 	h.hfunc = hfunc
 	h.config = c
-	h.pool = newSessionPool()
+	h.pool = newPool()
 	return h
 }
 
@@ -52,22 +52,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case method == "POST" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
-		//sessid := matches[1]
+		sessid := matches[1]
 		protocol := matches[2]
 		switch protocol {
 		case "websocket":
 			handleWebsocketPost(w, r)
 		case "xhr":
-			//handleXhrPolling(w, r, sessid, h)
+			handleXhrPolling(h, w, r, sessid)
 		case "xhr_send":
-			//handleXhrSend(w, r, sessid, h)
-		case "xhr_streaming":
-			//xhrStreamingHandler(w, r, sessid, h)
-		case "jsonp_send":
-			//handleJsonpSend(w, r, sessid, h)
+			handleXhrSend(h, w, r, sessid)
 		}
 	case method == "OPTIONS" && reSessionUrl.MatchString(path):
-		//xhrHandlerOptions(w, r)
+		handleXhrOptions(w, r)
 	default:
 		http.NotFound(w, r)
 	}

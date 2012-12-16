@@ -9,24 +9,24 @@ import (
 
 )
 
-type protoWebsocket struct { 
+type sessionWebsocket struct { 
 	ws *websocket.Conn
 	q *queue
 }
 
-func (p protoWebsocket) Receive() ([]byte, error) {
+func (s *sessionWebsocket) Receive() ([]byte, error) {
 	var messages []string
 	var data []byte
 
 	//* read some messages to the queue and pull the first one
-	err := websocket.Message.Receive(p.ws, &data)
+	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		return nil, err
 	}
 
 	// ignore, no frame
 	if len(data) == 0 {
-		return p.Receive()
+		return s.Receive()
 	}
 
 	err = json.Unmarshal(data, &messages)
@@ -36,21 +36,21 @@ func (p protoWebsocket) Receive() ([]byte, error) {
 
 
 	for _, v := range messages {
-		p.q.Push([]byte(v))
+		s.q.Push([]byte(v))
 	}
 
-	return p.q.Pull()
+	return s.q.Pull()
 }
 
-func (p protoWebsocket) Send(m []byte) (err error) {
-	_, err = p.ws.Write(frame("a", "", m))
+func (s *sessionWebsocket) Send(m []byte) (err error) {
+	_, err = s.ws.Write(frame("a", "", m))
 	return
 }
 
-func (p protoWebsocket) Close() error {
-	p.q.Close()
-	p.ws.Write([]byte(`c[3000,"Go away!"]`))
-	return p.ws.Close()
+func (s *sessionWebsocket) Close() error {
+	s.q.Close()
+	s.ws.Write([]byte(`c[3000,"Go away!"]`))
+	return s.ws.Close()
 }
 
 func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -85,8 +85,10 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		session := protoWebsocket{ws, newQueue(false)}
-		h.hfunc(session)
+		s := new(sessionWebsocket)
+		s.ws = ws
+		s.q = newQueue(false)
+		h.hfunc(s)
 	})
 
 	wh.ServeHTTP(w, r)

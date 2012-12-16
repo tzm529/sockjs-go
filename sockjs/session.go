@@ -4,7 +4,8 @@ import (
 	"errors"
 )
 
-var ErrSessionClosed error = errors.New("session is closed")
+var ErrSessionClosed error = errors.New("session closed")
+var ErrSessionTimeout error = errors.New("session timeout")
 
 type Session interface{
 	Receive() ([]byte, error)
