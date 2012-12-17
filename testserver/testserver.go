@@ -22,16 +22,19 @@ func echoHandler(s sockjs.Session) {
 }
 
 func main() {
+	server := sockjs.NewServer(http.DefaultServeMux)
+	defer server.Close()
+
 	dwsconf := sockjs.NewConfig()
 	dwsconf.Websocket = false
 
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
-	sockjs.Handle("/echo", echoHandler, sockjs.NewConfig())
-	sockjs.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
-	sockjs.Handle("/close",
+	server.Handle("/echo", echoHandler, sockjs.NewConfig())
+	server.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
+	server.Handle("/close",
 		func(s sockjs.Session) { s.Close() },
 		sockjs.NewConfig())
-	err := http.ListenAndServe(":8081", sockjs.DefaultServeMux)
+	err := http.ListenAndServe(":8081", server)
 	if err != nil {
 		fmt.Println(err)
 	}

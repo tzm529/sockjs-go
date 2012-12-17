@@ -5,34 +5,34 @@ import (
 	"sync"
 )
 
-var DefaultServeMux = NewServeMux(http.DefaultServeMux)
-
-func Handle(prefix string, hfunc func(Session), c Config) {
-	DefaultServeMux.Handle(prefix, hfunc, c)
-}
-
-// ServeMux is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
+// Server is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
 // but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-sockjs paths.
-type ServeMux struct {
+type Server struct {
 	mu sync.RWMutex
 	m   map[string]http.Handler
 	alt http.Handler
+	pool *pool
 }
 
-func NewServeMux(alt http.Handler) *ServeMux {
-	m := new(ServeMux)
+func NewServer(alt http.Handler) *Server {
+	m := new(Server)
 	m.m = make(map[string]http.Handler)
 	m.alt = alt
+	m.pool = newPool()
 	return m
 }
 
-func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *Server) Close() {
+	m.pool.Close()
+}
+
+func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := m.match(r.URL.Path)
 	h.ServeHTTP(w, r)
 }
 
-func (m *ServeMux) Handle(prefix string, hfunc func(Session), c Config) {
+func (m *Server) Handle(prefix string, hfunc func(Session), c Config) {
 	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
 		panic("sockjs: prefix must not end with a slash")
 	}
@@ -40,7 +40,7 @@ func (m *ServeMux) Handle(prefix string, hfunc func(Session), c Config) {
 		panic("sockjs: multiple registrations for " + prefix)
 	}
 
-	handler := newHandler(prefix, hfunc, c)
+	handler := newHandler(m.pool, prefix, hfunc, c)
 
 	m.mu.Lock()
 	m.m[prefix] = handler
@@ -55,7 +55,7 @@ func pathMatch(prefix, path string) bool {
 // Return a handler from the handler map that matches the given a path.
 // Most-specific (longest) prefix wins.
 // If no handler is found, return the alternate handler or http.NotFoundHandler().
-func (m *ServeMux) match(path string) (h http.Handler) {
+func (m *Server) match(path string) (h http.Handler) {
 	var n = 0
 	m.mu.RLock()
 	defer m.mu.RUnlock()

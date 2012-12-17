@@ -8,7 +8,7 @@ import (
 )
 
 type sessionXhrPolling struct { 
-	*pool // owned by Handler
+	*pool // owned by Server
 	sync.Mutex
 	closed bool
 	in, out *queue
