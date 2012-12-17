@@ -41,3 +41,6 @@ func (p *pool) Remove(sessid string) (s Session) {
 	delete(p.pool, sessid)
 	return
 }
+
+func (p *pool) Close() {
+}
