@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-type sessionRawWebsocket struct { ws *websocket.Conn }
+type sessionRawWebsocket struct{ ws *websocket.Conn }
 
 func (p *sessionRawWebsocket) Receive() (data []byte, err error) {
 	err = websocket.Message.Receive(p.ws, &data)
@@ -38,4 +38,3 @@ func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 	wh.ServeHTTP(w, r)
 }
-

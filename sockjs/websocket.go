@@ -1,15 +1,14 @@
 package sockjs
 
 import (
-	"fmt"
-	"strings"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
+	"fmt"
 	"net/http"
-
+	"strings"
 )
 
-type websocketSession struct { 
+type websocketSession struct {
 	*baseSession
 	ws *websocket.Conn
 }
@@ -33,7 +32,6 @@ func (s *websocketSession) Receive() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 
 	for _, v := range messages {
 		s.in.push([]byte(v))
@@ -104,9 +102,9 @@ func handleWebsocketPost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	fmt.Fprintf(bufrw, 
-		"HTTP/1.1 %d %s\r\n", 
-		http.StatusMethodNotAllowed, 
+	fmt.Fprintf(bufrw,
+		"HTTP/1.1 %d %s\r\n",
+		http.StatusMethodNotAllowed,
 		http.StatusText(http.StatusMethodNotAllowed))
 	fmt.Fprint(bufrw, "Content-Length: 0\r\n")
 	fmt.Fprint(bufrw, "Allow: GET\r\n")

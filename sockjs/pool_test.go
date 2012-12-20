@@ -4,7 +4,7 @@ import (
 	. "launchpad.net/gocheck"
 )
 
-type PoolSuite struct{
+type PoolSuite struct {
 	p *pool
 }
 
@@ -43,4 +43,3 @@ func (s *PoolSuite) TestPoolRemove(c *C) {
 	_, exists := s.p.pool["foo"]
 	c.Check(exists, Equals, false)
 }
-

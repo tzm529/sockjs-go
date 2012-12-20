@@ -2,8 +2,8 @@ package sockjs
 
 import (
 	"container/list"
-	"sync"
 	"errors"
+	"sync"
 )
 
 var errQueueClosed error = errors.New("queue is closed")
@@ -11,11 +11,11 @@ var errQueueWait error = errors.New("this queue forbids concurrent wait")
 
 // Infinite message queue
 type queue struct {
-	*list.List  
+	*list.List
 	sync.Mutex
 	*sync.Cond
 	closed bool
-	wait bool // forbid concurrent wait?
+	wait   bool // forbid concurrent wait?
 }
 
 func newQueue(wait bool) (q *queue) {
@@ -34,7 +34,7 @@ func newQueue(wait bool) (q *queue) {
 func (q *queue) pull() (m []byte, err error) {
 	q.Lock()
 	defer q.Unlock()
-	for q.Len() == 0 { 
+	for q.Len() == 0 {
 		if !q.closed {
 			if !q.wait {
 				q.Wait()
@@ -53,8 +53,8 @@ func (q *queue) pull() (m []byte, err error) {
 func (q *queue) pullAll() (messages [][]byte, err error) {
 	q.Lock()
 	defer q.Unlock()
-	for q.Len() == 0 { 
-		if !q.closed { 
+	for q.Len() == 0 {
+		if !q.closed {
 			if !q.wait {
 				q.Wait()
 			} else {
@@ -76,7 +76,9 @@ func (q *queue) pullAll() (messages [][]byte, err error) {
 func (q *queue) push(messages ...[]byte) {
 	q.Lock()
 	defer q.Unlock()
-	if q.closed { panic(errQueueClosed) }
+	if q.closed {
+		panic(errQueueClosed)
+	}
 	for _, v := range messages {
 		q.PushBack(v)
 	}

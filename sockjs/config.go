@@ -22,8 +22,8 @@ func NewConfig() (c Config) {
 	c.SockjsURL = "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
 	c.ResponseLimit = 131072 // 128K
 	c.Websocket = true
-	c.HeartbeatDelay = time.Duration(25)*time.Second
-	c.DisconnectDelay = time.Duration(5)*time.Second
+	c.HeartbeatDelay = time.Duration(25) * time.Second
+	c.DisconnectDelay = time.Duration(5) * time.Second
 
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()

@@ -31,4 +31,3 @@ func preflight(h http.Header, r *http.Request) {
 
 	h.Add("Access-Control-Allow-Credentials", "true")
 }
-

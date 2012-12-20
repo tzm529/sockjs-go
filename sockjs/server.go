@@ -9,9 +9,9 @@ import (
 // but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-sockjs paths.
 type Server struct {
-	mu sync.RWMutex
-	m   map[string]http.Handler
-	alt http.Handler
+	mu   sync.RWMutex
+	m    map[string]http.Handler
+	alt  http.Handler
 	pool *pool
 }
 

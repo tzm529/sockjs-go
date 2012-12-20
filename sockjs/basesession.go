@@ -5,10 +5,10 @@ import (
 )
 
 type baseSession struct {
-	mu sync.Mutex
-	pool *pool // owned by Server
+	mu      sync.Mutex
+	pool    *pool // owned by Server
 	closed_ bool
-	in *queue
+	in      *queue
 }
 
 func newBaseSession(pool *pool) (s *baseSession) {

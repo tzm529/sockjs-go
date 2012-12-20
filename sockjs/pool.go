@@ -28,7 +28,9 @@ func (p *pool) getOrCreate(sessid string, f sessionFactory) (s Session, exists b
 	p.Lock()
 	defer p.Unlock()
 	s, exists = p.pool[sessid]
-	if exists { return }
+	if exists {
+		return
+	}
 	p.pool[sessid] = f()
 	s = p.pool[sessid]
 	return

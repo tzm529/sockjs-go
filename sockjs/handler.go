@@ -15,7 +15,7 @@ type Handler struct {
 	prefix string
 	hfunc  func(Session)
 	config Config
-	pool *pool
+	pool   *pool
 }
 
 func newHandler(pool *pool, prefix string, hfunc func(Session), c Config) (h *Handler) {

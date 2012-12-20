@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func handleXhrSend(h *Handler,w http.ResponseWriter, r *http.Request, sessid string) {
+func handleXhrSend(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	s := h.pool.get(sessid)
 	if s == nil {
 		http.NotFound(w, r)

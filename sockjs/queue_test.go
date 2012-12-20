@@ -4,7 +4,7 @@ import (
 	. "launchpad.net/gocheck"
 )
 
-type QueueSuite struct{
+type QueueSuite struct {
 	q *queue
 }
 
@@ -34,10 +34,10 @@ func (s *QueueSuite) TestPullAll(c *C) {
 	defer s.q.close()
 
 	s.q.push([]byte{'a'}, []byte{'b'}, []byte{'c'})
-	
+
 	v, err := s.q.pullAll()
 	c.Assert(err, IsNil)
-	c.Assert(v, DeepEquals, [][]byte{{'a'},{'b'},{'c'}})
+	c.Assert(v, DeepEquals, [][]byte{{'a'}, {'b'}, {'c'}})
 }
 
 func (s *QueueSuite) TestClosedPullError(c *C) {
@@ -75,4 +75,3 @@ func (s *QueueSuite) TestWaitPullError(c *C) {
 	go f()
 	go f()
 }
-
