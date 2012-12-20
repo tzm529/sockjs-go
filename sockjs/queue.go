@@ -31,7 +31,7 @@ func newQueue(wait bool) (q *queue) {
 // errQueueClosed is returned, if the queue is closed. 
 // errQueueWait is returned, 
 // if another goroutine is waiting and the queue does not allow concurrent waits.
-func (q *queue) Pull() (m []byte, err error) {
+func (q *queue) pull() (m []byte, err error) {
 	q.Lock()
 	defer q.Unlock()
 	for q.Len() == 0 { 
@@ -50,7 +50,7 @@ func (q *queue) Pull() (m []byte, err error) {
 }
 
 // PullAll is like Pull except it returns all messages from the message queue.
-func (q *queue) PullAll() (elems [][]byte, err error) {
+func (q *queue) pullAll() (messages [][]byte, err error) {
 	q.Lock()
 	defer q.Unlock()
 	for q.Len() == 0 { 
@@ -64,25 +64,27 @@ func (q *queue) PullAll() (elems [][]byte, err error) {
 			return nil, errQueueClosed
 		}
 	}
-	elems = make([][]byte, q.Len())
+	messages = make([][]byte, q.Len())
 	for e, i := q.Front(), 0; e != nil; e, i = q.Front(), i+1 {
-		elems[i], _ = q.Remove(e).([]byte)
+		messages[i], _ = q.Remove(e).([]byte)
 	}
-	return elems, nil
+	return messages, nil
 }
 
-// Push pushes a message to the message queue.
+// Push pushes given messages to the message queue.
 // Panics, if the queue is closed.
-func (q *queue) Push(m []byte) {
+func (q *queue) push(messages ...[]byte) {
 	q.Lock()
 	defer q.Unlock()
 	if q.closed { panic(errQueueClosed) }
-	q.PushBack(m)
+	for _, v := range messages {
+		q.PushBack(v)
+	}
 	q.Signal()
 }
 
 // Close empties the queue, marks it closed and wakes up remaining goroutines waiting on pull.
-func (q *queue) Close() {
+func (q *queue) close() {
 	q.Lock()
 	defer q.Unlock()
 	q.Init()

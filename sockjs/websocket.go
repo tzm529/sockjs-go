@@ -9,12 +9,12 @@ import (
 
 )
 
-type sessionWebsocket struct { 
+type websocketSession struct { 
+	*baseSession
 	ws *websocket.Conn
-	q *queue
 }
 
-func (s *sessionWebsocket) Receive() ([]byte, error) {
+func (s *websocketSession) Receive() ([]byte, error) {
 	var messages []string
 	var data []byte
 
@@ -36,21 +36,22 @@ func (s *sessionWebsocket) Receive() ([]byte, error) {
 
 
 	for _, v := range messages {
-		s.q.Push([]byte(v))
+		s.in.push([]byte(v))
 	}
 
-	return s.q.Pull()
+	return s.in.pull()
 }
 
-func (s *sessionWebsocket) Send(m []byte) (err error) {
+func (s *websocketSession) Send(m []byte) (err error) {
 	_, err = s.ws.Write(frame("a", "", m))
 	return
 }
 
-func (s *sessionWebsocket) Close() error {
-	s.q.Close()
+func (s *websocketSession) Close() (err error) {
 	s.ws.Write([]byte(`c[3000,"Go away!"]`))
-	return s.ws.Close()
+	err = s.ws.Close()
+	s.closeBase()
+	return
 }
 
 func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -85,9 +86,9 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s := new(sessionWebsocket)
+		s := new(websocketSession)
+		s.baseSession = newBaseSession(h.pool)
 		s.ws = ws
-		s.q = newQueue(false)
 		h.hfunc(s)
 	})
 

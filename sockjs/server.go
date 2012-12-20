@@ -24,7 +24,7 @@ func NewServer(alt http.Handler) *Server {
 }
 
 func (m *Server) Close() {
-	m.pool.Close()
+	m.pool.close()
 }
 
 func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -40,10 +40,8 @@ func (m *Server) Handle(prefix string, hfunc func(Session), c Config) {
 		panic("sockjs: multiple registrations for " + prefix)
 	}
 
-	handler := newHandler(m.pool, prefix, hfunc, c)
-
 	m.mu.Lock()
-	m.m[prefix] = handler
+	m.m[prefix] = newHandler(m.pool, prefix, hfunc, c)
 	m.mu.Unlock()
 }
 

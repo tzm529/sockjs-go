@@ -18,12 +18,12 @@ type Handler struct {
 	pool *pool
 }
 
-func newHandler(prefix string, hfunc func(Session), c Config) (h *Handler) {
+func newHandler(pool *pool, prefix string, hfunc func(Session), c Config) (h *Handler) {
 	h = new(Handler)
 	h.prefix = prefix
 	h.hfunc = hfunc
 	h.config = c
-	h.pool = newPool()
+	h.pool = pool
 	return h
 }
 

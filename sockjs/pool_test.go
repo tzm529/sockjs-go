@@ -15,23 +15,23 @@ func (s *PoolSuite) SetUpTest(c *C) {
 }
 
 func (s *PoolSuite) TearDownTest(c *C) {
-	s.p.Close()
+	s.p.close()
 }
 
 func (s *PoolSuite) TestPoolGet(c *C) {
 	session := new(sessionRawWebsocket)
 	s.p.pool["foo"] = session
-	c.Check(s.p.Get("foo"), Equals, session)
+	c.Check(s.p.get("foo"), Equals, session)
 }
 
 func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
 	session := new(sessionRawWebsocket)
 	f := func() Session { return session }
-	r, exists := s.p.GetOrCreate("foo", f)
+	r, exists := s.p.getOrCreate("foo", f)
 	c.Assert(r, Equals, session)
 	c.Assert(exists, Equals, false)
 
-	r, exists = s.p.GetOrCreate("foo", f)
+	r, exists = s.p.getOrCreate("foo", f)
 	c.Assert(r, Equals, session)
 	c.Assert(exists, Equals, true)
 }
@@ -39,7 +39,7 @@ func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
 func (s *PoolSuite) TestPoolRemove(c *C) {
 	session := new(sessionRawWebsocket)
 	s.p.pool["foo"] = session
-	s.p.Remove("foo")
+	s.p.remove("foo")
 	_, exists := s.p.pool["foo"]
 	c.Check(exists, Equals, false)
 }

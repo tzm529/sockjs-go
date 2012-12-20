@@ -18,13 +18,13 @@ func newPool() *pool {
 	return pool
 }
 
-func (p *pool) Get(sessid string) Session {
+func (p *pool) get(sessid string) Session {
 	p.RLock()
 	defer p.RUnlock()
 	return p.pool[sessid]
 }
 
-func (p *pool) GetOrCreate(sessid string, f sessionFactory) (s Session, exists bool) {
+func (p *pool) getOrCreate(sessid string, f sessionFactory) (s Session, exists bool) {
 	p.Lock()
 	defer p.Unlock()
 	s, exists = p.pool[sessid]
@@ -34,7 +34,7 @@ func (p *pool) GetOrCreate(sessid string, f sessionFactory) (s Session, exists b
 	return
 }
 
-func (p *pool) Remove(sessid string) (s Session) {
+func (p *pool) remove(sessid string) (s Session) {
 	p.Lock()
 	defer p.Unlock()
 	s = p.pool[sessid]
@@ -42,5 +42,5 @@ func (p *pool) Remove(sessid string) (s Session) {
 	return
 }
 
-func (p *pool) Close() {
+func (p *pool) close() {
 }
