@@ -7,7 +7,7 @@ import (
 )
 
 var errQueueClosed error = errors.New("queue is closed")
-var errQueueWait error = errors.New("this queue forbids concurrent wait")
+var errQueueWait error = errors.New("queue forbids concurrent wait")
 
 // Infinite message queue
 type queue struct {
@@ -69,6 +69,18 @@ func (q *queue) pullAll() (messages [][]byte, err error) {
 		messages[i], _ = q.Remove(e).([]byte)
 	}
 	return messages, nil
+}
+
+// PullNow is like Pull except it does not block.
+func (q *queue) pullNow() (m []byte, err error) {
+	q.Lock()
+	defer q.Unlock()
+	if q.closed {
+		return nil, errQueueClosed
+	}
+	if q.Len() == 0 { return }
+	m, _ = q.Remove(q.Front()).([]byte)
+	return m, nil
 }
 
 // Push pushes given messages to the message queue.

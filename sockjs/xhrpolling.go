@@ -2,7 +2,51 @@ package sockjs
 
 import (
 	"net/http"
+	"sync"
 )
+
+type pollingSession struct {
+	mu sync.Mutex
+	pool *pool
+	closed_ bool
+	in_  *queue
+	out_ *queue
+}
+
+func pollingSessionFactory(pool *pool) session {
+	s := new(pollingSession)
+	s.pool = pool
+	s.in_ = newQueue(false)
+	s.out_ = newQueue(true)
+	return s
+}
+
+func (s *pollingSession) Receive() ([]byte, error) {
+	return s.in_.pull()
+}
+
+func (s *pollingSession) Send(m []byte) error {
+	s.out_.push(m)
+	return nil
+}
+
+func (s *pollingSession) Close() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.closed_ = true
+	s.in_.close()
+	s.out_.close()
+	return nil
+}
+
+func (s *pollingSession) in() *queue { return s.in_ }
+func (s *pollingSession) out() *queue { return s.out_ }
+
+func (s *pollingSession) closed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed_
+}
 
 func handleXhrPolling(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	header := w.Header()
@@ -10,13 +54,7 @@ func handleXhrPolling(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 	disableCache(header)
 	preflight(header, r)
 
-	sessionFactory := func() Session {
-		s := newPollingBaseSession(h.pool)
-		s.out = newQueue(true)
-		return Session(s)
-	}
-
-	si, exists := h.pool.getOrCreate(sessid, sessionFactory)
+	s, exists := h.pool.getOrCreate(sessid, pollingSessionFactory)
 	if !exists {
 		// initiate connection
 		_, err := w.Write([]byte("o\n"))
@@ -26,31 +64,18 @@ func handleXhrPolling(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 			return
 		}
 
-		go h.hfunc(si)
+		go h.hfunc(s)
 		return
 	}
 
-	s, ok := si.(*pollingBaseSession)
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-
-	if s.closed() {
-		w.Write([]byte("c[3000,\"Go away!\"]\n"))
-		return
-	}
-
-	m, err := s.out.pullAll()
+	m, err := s.out().pullAll()
 	if err != nil {
 		if err == errQueueWait {
-			w.Write([]byte("c[2010,\"Another connection still open\"]\n"))
+			w.Write(cframe("\n", 2010, "Another connection still open"))
+		} else {
+			w.Write(cframe("\n", 3000, "Go away!"))
 		}
 		return
 	}
-	if m == nil {
-		http.NotFound(w, r)
-		return
-	}
-	w.Write(frame("a", "\n", m...))
+	w.Write(aframe("\n", m...))
 }

@@ -1,19 +1,26 @@
 package sockjs
 
 import (
+	"fmt"
 	"encoding/json"
 	"net/http"
 )
 
-func frame(prefix string, suffix string, strings ...[]byte) (f []byte) {
-	var jsonin []string
-	f = append(f, []byte(prefix)...)
-	for _, v := range strings {
-		jsonin = append(jsonin, string(v))
+func aframe(suffix string, m ...[]byte) (f []byte) {
+	strings := make([]string, len(m))
+	for i := range m {
+		strings[i] = string(m[i])
 	}
-	s, _ := json.Marshal(&jsonin)
+	s, _ := json.Marshal(&strings)
+
+	f = append(f, 'a')
 	f = append(f, s...)
 	f = append(f, []byte(suffix)...)
+	return
+}
+
+func cframe(suffix string, code int, m string) (f []byte) {
+	f = []byte(fmt.Sprintf(`c[%d,"%s"]%s`, code, m, suffix))
 	return
 }
 

@@ -9,46 +9,56 @@ import (
 )
 
 type websocketSession struct {
-	*baseSession
+	in *queue
 	ws *websocket.Conn
 }
 
-func (s *websocketSession) Receive() ([]byte, error) {
+func (s *websocketSession) Receive() (m []byte, err error) {
+	m, err = s.in.pullNow()
+	if err != nil {
+		return nil, ErrSessionClosed
+	}
+	if m != nil { return }
+	
+	//* read some messages to the queue and pull the first one
 	var messages []string
 	var data []byte
-
-	//* read some messages to the queue and pull the first one
-	err := websocket.Message.Receive(s.ws, &data)
+	
+	err = websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	// ignore, no frame
 	if len(data) == 0 {
 		return s.Receive()
 	}
-
+	
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	for _, v := range messages {
 		s.in.push([]byte(v))
 	}
+	
+	m, err = s.in.pull()
+	if err != nil {
+		return nil, ErrSessionClosed
+	}
 
-	return s.in.pull()
+	return m, nil
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
-	_, err = s.ws.Write(frame("a", "", m))
+	_, err = s.ws.Write(aframe("", m))
 	return
 }
 
 func (s *websocketSession) Close() (err error) {
-	s.ws.Write([]byte(`c[3000,"Go away!"]`))
+	s.ws.Write(cframe("", 3000, "Go away!"))
 	err = s.ws.Close()
-	s.closeBase()
 	return
 }
 
@@ -85,7 +95,7 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 		}
 
 		s := new(websocketSession)
-		s.baseSession = newBaseSession(h.pool)
+		s.in = newQueue(false)
 		s.ws = ws
 		h.hfunc(s)
 	})

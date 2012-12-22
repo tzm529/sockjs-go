@@ -7,14 +7,13 @@ import (
 )
 
 func handleXhrSend(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+	header := w.Header()
+	header.Add("Content-Type", "text/plain; charset=UTF-8")
+	preflight(header, r)
+	disableCache(header)
+
 	s := h.pool.get(sessid)
 	if s == nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	x, ok := s.(*pollingBaseSession)
-	if !ok {
 		http.NotFound(w, r)
 		return
 	}
@@ -32,12 +31,8 @@ func handleXhrSend(h *Handler, w http.ResponseWriter, r *http.Request, sessid st
 		return
 	}
 	for _, v := range messages {
-		x.in.push([]byte(v))
+		s.in().push([]byte(v))
 	}
-	header := w.Header()
-	header.Add("Content-Type", "text/plain; charset=UTF-8")
-	preflight(header, r)
-	disableCache(header)
 	w.WriteHeader(http.StatusNoContent)
 }
 
