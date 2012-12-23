@@ -31,7 +31,7 @@ func handleXhrSend(h *Handler, w http.ResponseWriter, r *http.Request, sessid st
 		return
 	}
 	for _, v := range messages {
-		s.in().push([]byte(v))
+		s.in.push([]byte(v))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

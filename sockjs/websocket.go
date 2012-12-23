@@ -38,6 +38,11 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// ignore, no messages
+	if len(messages) == 0 {
+		return s.Receive()
+	}
 	
 	for _, v := range messages {
 		s.in.push([]byte(v))
@@ -95,7 +100,7 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 		}
 
 		s := new(websocketSession)
-		s.in = newQueue(false)
+		s.in = newQueue()
 		s.ws = ws
 		h.hfunc(s)
 	})

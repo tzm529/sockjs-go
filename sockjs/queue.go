@@ -7,7 +7,6 @@ import (
 )
 
 var errQueueClosed error = errors.New("queue is closed")
-var errQueueWait error = errors.New("queue forbids concurrent wait")
 
 // Infinite message queue
 type queue struct {
@@ -15,32 +14,25 @@ type queue struct {
 	sync.Mutex
 	*sync.Cond
 	closed bool
-	wait   bool // forbid concurrent wait?
 }
 
-func newQueue(wait bool) (q *queue) {
+func newQueue() (q *queue) {
 	q = new(queue)
 	q.List = list.New()
 	q.Cond = sync.NewCond(q)
-	q.wait = wait
 	return
 }
 
 // Pull returns a message from the message queue or an error, if any.
 // Blocks, if queue is empty.
 // errQueueClosed is returned, if the queue is closed. 
-// errQueueWait is returned, 
-// if another goroutine is waiting and the queue does not allow concurrent waits.
 func (q *queue) pull() (m []byte, err error) {
 	q.Lock()
 	defer q.Unlock()
+
 	for q.Len() == 0 {
 		if !q.closed {
-			if !q.wait {
-				q.Wait()
-			} else {
-				return nil, errQueueWait
-			}
+			q.Wait()
 		} else {
 			return nil, errQueueClosed
 		}
@@ -53,13 +45,10 @@ func (q *queue) pull() (m []byte, err error) {
 func (q *queue) pullAll() (messages [][]byte, err error) {
 	q.Lock()
 	defer q.Unlock()
+
 	for q.Len() == 0 {
 		if !q.closed {
-			if !q.wait {
-				q.Wait()
-			} else {
-				return nil, errQueueWait
-			}
+			q.Wait()
 		} else {
 			return nil, errQueueClosed
 		}
@@ -75,6 +64,7 @@ func (q *queue) pullAll() (messages [][]byte, err error) {
 func (q *queue) pullNow() (m []byte, err error) {
 	q.Lock()
 	defer q.Unlock()
+
 	if q.closed {
 		return nil, errQueueClosed
 	}

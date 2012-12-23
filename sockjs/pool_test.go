@@ -19,26 +19,25 @@ func (s *PoolSuite) TearDownTest(c *C) {
 }
 
 func (s *PoolSuite) TestPoolGet(c *C) {
-	session := pollingSessionFactory(s.p)
+	session := newSession(s.p)
 	s.p.pool["foo"] = session
 	c.Check(s.p.get("foo"), Equals, session)
 }
 
 func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
-	session_ := pollingSessionFactory(s.p)
-	sessionFactory := func(_ *pool) session { return session_ }
+	session_ := newSession(s.p)
 
-	r, exists := s.p.getOrCreate("foo", sessionFactory)
+	r, exists := s.p.getOrCreate("foo")
 	c.Assert(r, DeepEquals, session_)
 	c.Assert(exists, Equals, false)
 
-	r, exists = s.p.getOrCreate("foo", sessionFactory)
+	r, exists = s.p.getOrCreate("foo")
 	c.Assert(r, DeepEquals, session_)
 	c.Assert(exists, Equals, true)
 }
 
 func (s *PoolSuite) TestPoolRemove(c *C) {
-	session := pollingSessionFactory(s.p)
+	session := newSession(s.p)
 	s.p.pool["foo"] = session
 	s.p.remove("foo")
 	_, exists := s.p.pool["foo"]

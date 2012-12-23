@@ -59,6 +59,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			handleWebsocketPost(w, r)
 		case "xhr":
 			handleXhrPolling(h, w, r, sessid)
+		case "xhr_streaming":
+			handleXhrStreaming(h, w, r, sessid)
 		case "xhr_send":
 			handleXhrSend(h, w, r, sessid)
 		}

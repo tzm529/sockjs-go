@@ -25,15 +25,18 @@ func main() {
 	server := sockjs.NewServer(http.DefaultServeMux)
 	defer server.Close()
 
+	conf := sockjs.NewConfig()
+	conf.ResponseLimit = 4096
 	dwsconf := sockjs.NewConfig()
+	dwsconf.ResponseLimit = 4096
 	dwsconf.Websocket = false
 
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
-	server.Handle("/echo", echoHandler, sockjs.NewConfig())
+	server.Handle("/echo", echoHandler, conf)
 	server.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
 	server.Handle("/close",
 		func(s sockjs.Session) { s.Close() },
-		sockjs.NewConfig())
+		conf)
 	err := http.ListenAndServe(":8081", server)
 	if err != nil {
 		fmt.Println(err)

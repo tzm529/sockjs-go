@@ -11,7 +11,7 @@ type QueueSuite struct {
 var _ = Suite(&QueueSuite{})
 
 func (s *QueueSuite) TestPull(c *C) {
-	s.q = newQueue(false)
+	s.q = newQueue()
 
 	s.q.push([]byte{'a'}, []byte{'b'}, []byte{'c'})
 
@@ -36,7 +36,7 @@ func (s *QueueSuite) TestPull(c *C) {
 }
 
 func (s *QueueSuite) TestPullAll(c *C) {
-	s.q = newQueue(false)
+	s.q = newQueue()
 
 	s.q.push([]byte{'a'}, []byte{'b'}, []byte{'c'})
 
@@ -53,7 +53,7 @@ func (s *QueueSuite) TestPullAll(c *C) {
 }
 
 func (s *QueueSuite) TestPullNow(c *C) {
-	s.q = newQueue(false)
+	s.q = newQueue()
 
 	v, err := s.q.pullNow()
 	c.Assert(v, IsNil)
@@ -75,28 +75,13 @@ func (s *QueueSuite) TestPullNow(c *C) {
 
 
 func (s *QueueSuite) TestClosedPullError(c *C) {
-	s.q = newQueue(false)
+	s.q = newQueue()
 	defer s.q.close()
 
-}
-
-func (s *QueueSuite) TestWaitPullError(c *C) {
-	s.q = newQueue(true)
-	defer s.q.close()
-
-	f := func() {
-		_, err := s.q.pull()
-		if !(err == errQueueClosed || err == errQueueWait) {
-			c.Fatal("wrong error value")
-		}
-	}
-
-	go f()
-	go f()
 }
 
 func (s *QueueSuite) TestClosedPushPanic(c *C) {
-	s.q = newQueue(false)
+	s.q = newQueue()
 	defer s.q.close()
 
 	s.q.push([]byte{'a'})
