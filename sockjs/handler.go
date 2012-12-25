@@ -8,7 +8,7 @@ import (
 var reInfo = regexp.MustCompile(`^/info$`)
 var reIframe = regexp.MustCompile(`^/iframe[\w\d-\. ]*\.html$`)
 var reSessionUrl = regexp.MustCompile(
-	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|htmlfile||websocket|jsonp|jsonp_send)$`)
+	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|htmlfile|websocket|jsonp|jsonp_send)$`)
 var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
 type Handler struct {
