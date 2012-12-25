@@ -8,7 +8,7 @@ import (
 var reInfo = regexp.MustCompile(`^/info$`)
 var reIframe = regexp.MustCompile(`^/iframe[\w\d-\. ]*\.html$`)
 var reSessionUrl = regexp.MustCompile(
-	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|websocket|jsonp|jsonp_send)$`)
+	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|htmlfile||websocket|jsonp|jsonp_send)$`)
 var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
 type Handler struct {
@@ -52,6 +52,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			websocketHandler(h, w, r)
 		case "eventsource":
 			streamingProtocolHandler(h, w, r, sessid, eventSourceProtocol{})
+		case "htmlfile":
+			htmlfileHandler(h,w,r,sessid)
 		}
 	case method == "POST" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)

@@ -18,7 +18,11 @@ type streamingProtocol interface {
 	writePrelude(io.Writer) error
 }
 
-func protocolHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string, proto protocol) {
+func protocolHandler(h *Handler, 
+	w http.ResponseWriter, 
+	r *http.Request, 
+	sessid string, 
+	proto protocol) {
 	var err error
 	header := w.Header()
 	header.Add("Content-Type", proto.contentType())
@@ -77,7 +81,7 @@ func streamingProtocolHandler(h *Handler,
 		bufrw.Write([]byte("\r\n")) // close for chunked data
 		bufrw.Flush()
 	}()
-	
+
 	if err = proto.writePrelude(chunkedw); err != nil { return }
 	if err = bufrw.Flush(); err != nil { return }
 
@@ -85,7 +89,7 @@ func streamingProtocolHandler(h *Handler,
 	if !exists {
 		// initiate connection
 		if err = proto.writeOpen(chunkedw); err != nil { goto fail }
-		if err = bufrw.Flush(); err != nil { goto success }
+		if err = bufrw.Flush(); err != nil { goto fail }
 		goto success
 	fail:
 		h.pool.remove(sessid)
