@@ -14,8 +14,10 @@ type Session interface {
 	Close() error
 }
 
+// structure for non-websocket sessions
 type session struct {
 	mu sync.Mutex
+	proto protocol
 	pool *pool
 	in  *queue
 	out *queue

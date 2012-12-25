@@ -34,21 +34,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case method == "GET" && path == "" || path == "/":
-		handleGreeting(w)
+		greetingHandler(w)
 	case method == "GET" && reInfo.MatchString(path):
-		handleInfo(h, w, r)
+		infoHandler(h, w, r)
 	case method == "OPTIONS" && reInfo.MatchString(path):
-		handleInfoOptions(w, r)
+		infoOptionsHandler(w, r)
 	case method == "GET" && reIframe.MatchString(path):
-		handleIframe(h, w, r)
+		iframeHandler(h, w, r)
 	case method == "GET" && reRawWebsocket.MatchString(path):
-		handleRawWebsocket(h, w, r)
+		rawWebsocketHandler(h, w, r)
 	case method == "GET" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
+		sessid := matches[1]
 		protocol := matches[2]
 		switch protocol {
 		case "websocket":
-			handleWebsocket(h, w, r)
+			websocketHandler(h, w, r)
+		case "eventsource":
+			_ = sessid//eventSourceHandler(h, w,r, sessid)
 		}
 	case method == "POST" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
@@ -56,16 +59,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		protocol := matches[2]
 		switch protocol {
 		case "websocket":
-			handleWebsocketPost(w, r)
+			websocketPostHandler(w, r)
 		case "xhr":
-			handleXhrPolling(h, w, r, sessid)
+			baseHandler(h, w, r, sessid, protoXhrPolling{})
 		case "xhr_streaming":
-			handleXhrStreaming(h, w, r, sessid)
+			baseStreamingHandler(h, w, r, sessid, protoXhrStreaming{})
 		case "xhr_send":
-			handleXhrSend(h, w, r, sessid)
+			xhrSendHandler(h, w, r, sessid)
 		}
 	case method == "OPTIONS" && reSessionUrl.MatchString(path):
-		handleXhrOptions(w, r)
+		xhrOptionsHandler(w, r)
 	default:
 		http.NotFound(w, r)
 	}

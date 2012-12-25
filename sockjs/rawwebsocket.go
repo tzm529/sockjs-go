@@ -24,7 +24,7 @@ func (p *sessionRawWebsocket) Close() error {
 	return p.ws.Close()
 }
 
-func handleRawWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
+func rawWebsocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return

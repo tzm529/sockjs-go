@@ -57,23 +57,22 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
-	_, err = s.ws.Write(aframe("", m))
+	_, err = s.ws.Write(frame("","", m))
 	return
 }
 
 func (s *websocketSession) Close() (err error) {
-	s.ws.Write(cframe("", 3000, "Go away!"))
+	s.ws.Write(cframe("", 3000, "Go away!",""))
 	err = s.ws.Close()
 	return
 }
 
-func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
+func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return
 	}
 
-	// hack to pass test: test_httpMethod (__main__.WebsocketHttpErrors)
 	if r.Header.Get("Sec-WebSocket-Version") == "13" && r.Header.Get("Origin") == "" {
 		r.Header.Set("Origin", r.Header.Get("Sec-WebSocket-Origin"))
 	}
@@ -82,7 +81,6 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// hack to pass test: test_invalidConnectionHeader (__main__.WebsocketHttpErrors)
 	conn := strings.ToLower(r.Header.Get("Connection"))
 	if conn == "keep-alive, upgrade" {
 		r.Header.Set("Connection", "Upgrade")
@@ -108,8 +106,7 @@ func handleWebsocket(h *Handler, w http.ResponseWriter, r *http.Request) {
 	wh.ServeHTTP(w, r)
 }
 
-func handleWebsocketPost(w http.ResponseWriter, r *http.Request) {
-	// hack to pass test: test_invalidMethod (__main__.WebsocketHttpErrors)
+func websocketPostHandler(w http.ResponseWriter, r *http.Request) {
 	conn, bufrw, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
