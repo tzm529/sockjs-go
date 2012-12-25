@@ -12,22 +12,25 @@ func init() {
 	prelude[2048] = byte('\n')
 }
 
+type xhrStreamingProtocol struct{}
 
-type protoXhrStreaming struct{}
+func (p xhrStreamingProtocol) contentType() string { return "application/javascript; charset=UTF-8"}
 
-func (p protoXhrStreaming) contentType() string { return "application/javascript; charset=UTF-8"}
-func (p protoXhrStreaming) writePrelude(w io.Writer) (err error) { 
+func (p xhrStreamingProtocol) writePrelude(w io.Writer) (err error) { 
 	_, err = w.Write(prelude)
 	return
 }
-func (p protoXhrStreaming) writeOpen(w io.Writer) (err error) { 
-	_, err = w.Write([]byte("o\n"))
+
+func (p xhrStreamingProtocol) writeOpen(w io.Writer) (err error) { 
+	_, err = io.WriteString(w, "o\n")
 	return
 }
-func (p protoXhrStreaming) writeData(w io.Writer, m ...[]byte) (n int, err error) { 
+
+func (p xhrStreamingProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) { 
 	n, err = w.Write(frame("", "\n", m...))
 	return
 }
-func (p protoXhrStreaming) writeClose(w io.Writer, code int, m string) { 
+
+func (p xhrStreamingProtocol) writeClose(w io.Writer, code int, m string) { 
 	w.Write(cframe("", code, m, "\n"))
 }
