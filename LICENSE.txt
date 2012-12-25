@@ -1,4 +1,4 @@
-Copyright 2012 The Juhani Åhman. All rights reserved.
+Copyright 2012 Juhani Åhman. All rights reserved.
 
 MIT License
 
