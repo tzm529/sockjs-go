@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"regexp"
 	"fmt"
+	"bytes"
 )
 
 var escapable = regexp.MustCompile("[\x00-\x1f\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]")
-func escapist(m []byte) []byte {
-	return []byte(fmt.Sprintf(`\u%04x`, []rune(string(m))[0]))
+func escaper(m []byte) []byte {
+	return []byte(fmt.Sprintf(`\u%04x`, bytes.Runes(m)[0]))
 }
 
 func escapedDataFrame(m ...[]byte) (f []byte) {
@@ -19,7 +20,7 @@ func escapedDataFrame(m ...[]byte) (f []byte) {
 		strings[i] = string(m[i])
 	}
 	s, _ := json.Marshal(&strings)
-	s = escapable.ReplaceAllFunc(s, escapist)
+	s = escapable.ReplaceAllFunc(s, escaper)
 
 	f = append(f, 'a')
 	f = append(f, s...)
