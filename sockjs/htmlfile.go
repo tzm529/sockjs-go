@@ -45,7 +45,7 @@ func (p *htmlfileProtocol) writeOpen(w io.Writer) (err error) {
 }
 
 func (p *htmlfileProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
-	js, _ := json.Marshal(string(frame("", "", m...)))
+	js, _ := json.Marshal(string(aframe("", "", m...)))
 	n, err = fmt.Fprintf(w, "<script>\np(%s);\n</script>\r\n", js)
 	return
 }

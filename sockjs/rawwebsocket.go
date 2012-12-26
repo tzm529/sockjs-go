@@ -21,6 +21,8 @@ func (p *sessionRawWebsocket) Send(m []byte) (err error) {
 }
 
 func (p *sessionRawWebsocket) Close() error {
+	// BUG: Should specify close reason "Go away!".
+	//      websocket package does not allow doing this.
 	return p.ws.Close()
 }
 

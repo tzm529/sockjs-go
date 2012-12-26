@@ -21,7 +21,7 @@ func (p *jsonpProtocol) writeOpen(w io.Writer) (err error) {
 }
 
 func (p *jsonpProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
-	js, _ := json.Marshal(string(frame("", "", m...)))
+	js, _ := json.Marshal(string(aframe("", "", m...)))
 	n, err = fmt.Fprintf(w, "%s(%s);\r\n", p.callback, js)
 	return
 }

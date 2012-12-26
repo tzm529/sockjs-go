@@ -59,7 +59,7 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
-	_, err = s.ws.Write(frame("", "", m))
+	_, err = s.ws.Write(aframe("", "", m))
 	return
 }
 

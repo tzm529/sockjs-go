@@ -19,7 +19,7 @@ func (p eventSourceProtocol) writeOpen(w io.Writer) (err error) {
 }
 
 func (p eventSourceProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
-	n, err = w.Write(frame("data: ", "\r\n\r\n", m...))
+	n, err = w.Write(aframe("data: ", "\r\n\r\n", m...))
 	return
 }
 

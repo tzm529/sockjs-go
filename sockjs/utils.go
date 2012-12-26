@@ -10,7 +10,7 @@ import (
 // callback format for htmlfile and jsonp protocols
 var reCallback = regexp.MustCompile(`[^a-zA-Z0-9-_.]`)
 
-func frame(prefix, suffix string, m ...[]byte) (f []byte) {
+func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
 	strings := make([]string, len(m))
 	for i := range m {
 		strings[i] = string(m[i])

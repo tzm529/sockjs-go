@@ -22,17 +22,17 @@ func pollingHandler(h *Handler,
 	w http.ResponseWriter,
 	r *http.Request,
 	sessid string,
-	proto protocol) {
+	p protocol) {
 	var err error
 	header := w.Header()
-	header.Add("Content-Type", proto.contentType())
+	header.Add("Content-Type", p.contentType())
 	disableCache(header)
 	preflight(header, r)
 
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = proto.writeOpen(w); err != nil {
+		if err = p.writeOpen(w); err != nil {
 			h.pool.remove(sessid)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -43,26 +43,26 @@ func pollingHandler(h *Handler,
 
 	fail := s.reserve()
 	if fail {
-		proto.writeClose(w, 2010, "Another connection still open")
+		p.writeClose(w, 2010, "Another connection still open")
 		return
 	}
 	defer s.free()
 
 	m, err := s.out.pullAll()
 	if err != nil {
-		proto.writeClose(w, 3000, "Go away!")
+		p.writeClose(w, 3000, "Go away!")
 		return
 	}
-	proto.writeData(w, m...)
+	p.writeData(w, m...)
 }
 
 func streamingHandler(h *Handler,
 	w http.ResponseWriter,
 	r *http.Request,
 	sessid string,
-	proto streamingProtocol) {
+	p streamingProtocol) {
 	header := w.Header()
-	header.Add("Content-Type", proto.contentType())
+	header.Add("Content-Type", p.contentType())
 	disableCache(header)
 	preflight(header, r)
 	w.WriteHeader(http.StatusOK)
@@ -81,7 +81,7 @@ func streamingHandler(h *Handler,
 		bufrw.Flush()
 	}()
 
-	if err = proto.writePrelude(chunkedw); err != nil {
+	if err = p.writePrelude(chunkedw); err != nil {
 		return
 	}
 	if err = bufrw.Flush(); err != nil {
@@ -91,7 +91,7 @@ func streamingHandler(h *Handler,
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = proto.writeOpen(chunkedw); err != nil {
+		if err = p.writeOpen(chunkedw); err != nil {
 			goto fail
 		}
 		if err = bufrw.Flush(); err != nil {
@@ -107,7 +107,7 @@ func streamingHandler(h *Handler,
 
 	fail := s.reserve()
 	if fail {
-		proto.writeClose(chunkedw, 2010, "Another connection still open")
+		p.writeClose(chunkedw, 2010, "Another connection still open")
 		bufrw.Flush()
 		return
 	}
@@ -116,12 +116,12 @@ func streamingHandler(h *Handler,
 	for sent := 0; sent < h.config.ResponseLimit; {
 		m, err := s.out.pullAll()
 		if err != nil {
-			proto.writeClose(chunkedw, 3000, "Go away!")
+			p.writeClose(chunkedw, 3000, "Go away!")
 			bufrw.Flush()
 			return
 		}
 
-		n, err := proto.writeData(chunkedw, m...)
+		n, err := p.writeData(chunkedw, m...)
 		if err != nil {
 			return
 		}
