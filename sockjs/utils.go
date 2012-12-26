@@ -1,10 +1,14 @@
 package sockjs
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 )
+
+// callback format for htmlfile and jsonp protocols
+var reCallback = regexp.MustCompile(`[^a-zA-Z0-9-_.]`)
 
 func frame(prefix, suffix string, m ...[]byte) (f []byte) {
 	strings := make([]string, len(m))
@@ -26,5 +30,5 @@ func cframe(prefix string, code int, m string, suffix string) []byte {
 
 func writeHttpClose(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
-	w.Write(cframe("",3000,"Go away!","\n"))
+	w.Write(cframe("", 3000, "Go away!", "\n"))
 }

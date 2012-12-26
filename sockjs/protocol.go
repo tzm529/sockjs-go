@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 )
 
-type protocol interface{
+type protocol interface {
 	contentType() string
 	writeOpen(io.Writer) error
 	writeData(io.Writer, ...[]byte) (int, error)
@@ -18,10 +18,10 @@ type streamingProtocol interface {
 	writePrelude(io.Writer) error
 }
 
-func protocolHandler(h *Handler, 
-	w http.ResponseWriter, 
-	r *http.Request, 
-	sessid string, 
+func pollingHandler(h *Handler,
+	w http.ResponseWriter,
+	r *http.Request,
+	sessid string,
 	proto protocol) {
 	var err error
 	header := w.Header()
@@ -34,7 +34,7 @@ func protocolHandler(h *Handler,
 		// initiate connection
 		if err = proto.writeOpen(w); err != nil {
 			h.pool.remove(sessid)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		go h.hfunc(s)
@@ -56,11 +56,10 @@ func protocolHandler(h *Handler,
 	proto.writeData(w, m...)
 }
 
-
-func streamingProtocolHandler(h *Handler, 
-	w http.ResponseWriter, 
-	r *http.Request, 
-	sessid string, 
+func streamingHandler(h *Handler,
+	w http.ResponseWriter,
+	r *http.Request,
+	sessid string,
 	proto streamingProtocol) {
 	header := w.Header()
 	header.Add("Content-Type", proto.contentType())
@@ -69,8 +68,8 @@ func streamingProtocolHandler(h *Handler,
 	w.WriteHeader(http.StatusOK)
 
 	conn, bufrw, err := w.(http.Hijacker).Hijack()
-	if err != nil { 
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	defer conn.Close()
@@ -82,20 +81,28 @@ func streamingProtocolHandler(h *Handler,
 		bufrw.Flush()
 	}()
 
-	if err = proto.writePrelude(chunkedw); err != nil { return }
-	if err = bufrw.Flush(); err != nil { return }
+	if err = proto.writePrelude(chunkedw); err != nil {
+		return
+	}
+	if err = bufrw.Flush(); err != nil {
+		return
+	}
 
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = proto.writeOpen(chunkedw); err != nil { goto fail }
-		if err = bufrw.Flush(); err != nil { goto fail }
+		if err = proto.writeOpen(chunkedw); err != nil {
+			goto fail
+		}
+		if err = bufrw.Flush(); err != nil {
+			goto fail
+		}
 		goto success
 	fail:
 		h.pool.remove(sessid)
 		return
 	success:
-		go h.hfunc(s)	
+		go h.hfunc(s)
 	}
 
 	fail := s.reserve()
@@ -113,10 +120,14 @@ func streamingProtocolHandler(h *Handler,
 			bufrw.Flush()
 			return
 		}
-		
+
 		n, err := proto.writeData(chunkedw, m...)
-		if err != nil { return }
-		if err = bufrw.Flush(); err != nil { return }
+		if err != nil {
+			return
+		}
+		if err = bufrw.Flush(); err != nil {
+			return
+		}
 		sent += n
 	}
 }

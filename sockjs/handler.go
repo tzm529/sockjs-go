@@ -51,9 +51,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketHandler(h, w, r)
 		case "eventsource":
-			streamingProtocolHandler(h, w, r, sessid, eventSourceProtocol{})
+			streamingHandler(h, w, r, sessid, eventSourceProtocol{})
 		case "htmlfile":
-			htmlfileHandler(h,w,r,sessid)
+			htmlfileHandler(h, w, r, sessid)
+		case "jsonp":
+			jsonpHandler(h, w, r, sessid)
 		}
 	case method == "POST" && reSessionUrl.MatchString(path):
 		matches := reSessionUrl.FindStringSubmatch(path)
@@ -63,11 +65,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketPostHandler(w, r)
 		case "xhr":
-			protocolHandler(h, w, r, sessid, xhrPollingProtocol{})
+			pollingHandler(h, w, r, sessid, xhrPollingProtocol{})
 		case "xhr_streaming":
-			streamingProtocolHandler(h, w, r, sessid, xhrStreamingProtocol{})
+			streamingHandler(h, w, r, sessid, xhrStreamingProtocol{})
 		case "xhr_send":
 			xhrSendHandler(h, w, r, sessid)
+		case "jsonp_send":
+			jsonpSendHandler(h, w, r, sessid)
 		}
 	case method == "OPTIONS" && reSessionUrl.MatchString(path):
 		xhrOptionsHandler(w, r)

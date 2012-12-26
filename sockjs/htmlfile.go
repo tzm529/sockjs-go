@@ -1,12 +1,11 @@
 package sockjs
 
 import (
-	"net/http"
-	"fmt"
-	"strings"
-	"io"
-	"regexp"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 )
 
 const (
@@ -24,15 +23,13 @@ const (
   </script>`
 )
 
-var reCallback = regexp.MustCompile(`[^a-zA-Z0-9-_.]`)
-
-type htmlfileProtocol struct{
+type htmlfileProtocol struct {
 	callback string
 }
 
 func (p *htmlfileProtocol) contentType() string { return "text/html; charset=UTF-8" }
 
-func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) { 
+func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 	prelude := fmt.Sprintf(htmlFileFormat, p.callback)
 	if len(prelude) < 1024 {
 		prelude += strings.Repeat(" ", 1024)
@@ -42,38 +39,38 @@ func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 	return
 }
 
-func (p *htmlfileProtocol) writeOpen(w io.Writer) (err error) { 
-	_, err = io.WriteString(w, "<script>\np(\"o\");\n</script>\r\n")
+func (p *htmlfileProtocol) writeOpen(w io.Writer) (err error) {
+	_, err = w.Write([]byte("<script>\np(\"o\");\n</script>\r\n"))
 	return
 }
 
-func (p *htmlfileProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) { 
+func (p *htmlfileProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
 	js, _ := json.Marshal(string(frame("", "", m...)))
 	n, err = fmt.Fprintf(w, "<script>\np(%s);\n</script>\r\n", js)
 	return
 }
 
-func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) { 
+func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("<script>\np(\"", code, m, "\");\n</script>\r\n"))
 }
 
 func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	
+
 	callback := r.Form.Get("c")
 	if callback == "" {
 		http.Error(w, `"callback" parameter required`, http.StatusInternalServerError)
 		return
 	}
-    if reCallback.MatchString(callback) {
+	if reCallback.MatchString(callback) {
 		http.Error(w, `invalid "callback" parameter`, http.StatusInternalServerError)
 		return
 	}
 
 	p := new(htmlfileProtocol)
 	p.callback = callback
-	streamingProtocolHandler(h, w, r, sessid, p)
+	streamingHandler(h, w, r, sessid, p)
 }

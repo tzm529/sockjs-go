@@ -1,9 +1,9 @@
 package sockjs
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
+	"io"
+	"encoding/json"
 )
 
 func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
@@ -30,9 +30,11 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 		w.Write([]byte("Broken JSON encoding."))
 		return
 	}
+
 	for _, v := range messages {
 		s.in.push([]byte(v))
 	}
+	
 	w.WriteHeader(http.StatusNoContent)
 }
 

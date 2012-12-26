@@ -73,7 +73,6 @@ func (s *QueueSuite) TestPullNow(c *C) {
 	c.Assert(err, Equals, errQueueClosed)
 }
 
-
 func (s *QueueSuite) TestClosedPullError(c *C) {
 	s.q = newQueue()
 	defer s.q.close()

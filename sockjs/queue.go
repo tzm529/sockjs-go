@@ -68,7 +68,9 @@ func (q *queue) pullNow() (m []byte, err error) {
 	if q.closed {
 		return nil, errQueueClosed
 	}
-	if q.Len() == 0 { return }
+	if q.Len() == 0 {
+		return
+	}
 	m, _ = q.Remove(q.Front()).([]byte)
 	return m, nil
 }

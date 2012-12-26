@@ -16,12 +16,12 @@ type Session interface {
 
 // structure for non-websocket sessions
 type session struct {
-	mu sync.Mutex
-	proto protocol
-	pool *pool
-	in  *queue
-	out *queue
-	closed_ bool
+	mu       sync.Mutex
+	proto    protocol
+	pool     *pool // owned by Server
+	in       *queue
+	out      *queue
+	closed_  bool
 	reserved bool
 }
 

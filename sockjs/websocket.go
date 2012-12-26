@@ -18,22 +18,24 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 	if err != nil {
 		return nil, ErrSessionClosed
 	}
-	if m != nil { return }
-	
+	if m != nil {
+		return
+	}
+
 	//* read some messages to the queue and pull the first one
 	var messages []string
 	var data []byte
-	
+
 	err = websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// ignore, no frame
 	if len(data) == 0 {
 		return s.Receive()
 	}
-	
+
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
 		return nil, err
@@ -43,11 +45,11 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 	if len(messages) == 0 {
 		return s.Receive()
 	}
-	
+
 	for _, v := range messages {
 		s.in.push([]byte(v))
 	}
-	
+
 	m, err = s.in.pull()
 	if err != nil {
 		return nil, ErrSessionClosed
@@ -57,12 +59,12 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
-	_, err = s.ws.Write(frame("","", m))
+	_, err = s.ws.Write(frame("", "", m))
 	return
 }
 
 func (s *websocketSession) Close() (err error) {
-	s.ws.Write(cframe("", 3000, "Go away!",""))
+	s.ws.Write(cframe("", 3000, "Go away!", ""))
 	err = s.ws.Close()
 	return
 }
