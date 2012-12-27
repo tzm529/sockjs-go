@@ -7,21 +7,45 @@ import (
 )
 
 type Config struct {
+	// URL for SockJS client library.
+	// Default: "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
 	SockjsURL       string
-	ResponseLimit   int
+
+	// Enables websocket transport.
+	// Default: true
 	Websocket       bool
+
+	// Byte limit that can be sent over streaming session before it's closed.
+	// Default: 128 KiB
+	ResponseLimit   int
+
+	// Enables sticky sessions. 
+	// Default: false.
+	Jsessionid bool
+
+	// Enables IP-address checks for polling transports. 
+	// If enabled, all subsequent polling calls must be from the same IP-address.
+	// Default: true
+	VerifyAddr bool
+
+	// Heartbeat delay.
+	// Default: 25 seconds
 	HeartbeatDelay  time.Duration
+
+	// Disconnection timeout.
+	// Default: 5 seconds
 	DisconnectDelay time.Duration
 
-	// Iframe page
 	iframePage []byte
 	iframeHash string
 }
 
 func NewConfig() (c Config) {
 	c.SockjsURL = "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
-	c.ResponseLimit = 131072 // 128K
 	c.Websocket = true
+	c.ResponseLimit = 131072 // 128 KiB
+	c.Jsessionid = false
+	c.VerifyAddr = true
 	c.HeartbeatDelay = time.Duration(25) * time.Second
 	c.DisconnectDelay = time.Duration(5) * time.Second
 
