@@ -4,29 +4,7 @@ import (
 	"net/http"
 	"io"
 	"encoding/json"
-	"regexp"
-	"fmt"
-	"bytes"
 )
-
-var escapable = regexp.MustCompile("[\x00-\x1f\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]")
-func escaper(m []byte) []byte {
-	return []byte(fmt.Sprintf(`\u%04x`, bytes.Runes(m)[0]))
-}
-
-func escapedDataFrame(m ...[]byte) (f []byte) {
-	strings := make([]string, len(m))
-	for i := range m {
-		strings[i] = string(m[i])
-	}
-	s, _ := json.Marshal(&strings)
-	s = escapable.ReplaceAllFunc(s, escaper)
-
-	f = append(f, 'a')
-	f = append(f, s...)
-	f = append(f, '\n')
-	return
-}
 
 //* xhrPolling
 
@@ -35,12 +13,12 @@ type xhrPollingProtocol struct{}
 func (p xhrPollingProtocol) contentType() string { return "application/javascript; charset=UTF-8" }
 
 func (p xhrPollingProtocol) writeOpen(w io.Writer) (err error) {
-	_, err = w.Write([]byte("o\n"))
+	_, err = io.WriteString(w, "o\n")
 	return
 }
 
 func (p xhrPollingProtocol) writeData(w io.Writer, m ...[]byte) (int, error) {
-	return w.Write(escapedDataFrame(m...))
+	return w.Write(aframe("", "\n", m...))
 }
 
 func (p xhrPollingProtocol) writeClose(w io.Writer, code int, m string) {
@@ -53,9 +31,9 @@ var prelude []byte = make([]byte, 2049)
 
 func init() {
 	for i := 0; i < 2048; i++ {
-		prelude[i] = byte('h')
+		prelude[i] = 'h'
 	}
-	prelude[2048] = byte('\n')
+	prelude[2048] = '\n'
 }
 
 type xhrStreamingProtocol struct{ xhrPollingProtocol }

@@ -24,7 +24,7 @@ const (
 )
 
 type htmlfileProtocol struct {
-	callback string
+	callback string // read-only
 }
 
 func (p *htmlfileProtocol) contentType() string { return "text/html; charset=UTF-8" }
@@ -40,7 +40,7 @@ func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 }
 
 func (p *htmlfileProtocol) writeOpen(w io.Writer) (err error) {
-	_, err = w.Write([]byte("<script>\np(\"o\");\n</script>\r\n"))
+	_, err = io.WriteString(w, "<script>\np(\"o\");\n</script>\r\n")
 	return
 }
 

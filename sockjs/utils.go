@@ -1,6 +1,7 @@
 package sockjs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,19 +9,25 @@ import (
 )
 
 // callback format for htmlfile and jsonp protocols
-var reCallback = regexp.MustCompile(`[^a-zA-Z0-9-_.]`)
+var reCallback = regexp.MustCompile("[^a-zA-Z0-9-_.]")
+
+var escapable = regexp.MustCompile("[\x00-\x1f\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]")
+func escaper(m []byte) []byte {
+	return []byte(fmt.Sprintf(`\u%04x`, bytes.Runes(m)[0]))
+}
 
 func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
-	strings := make([]string, len(m))
+ 	strings := make([]string, len(m))
 	for i := range m {
 		strings[i] = string(m[i])
 	}
-	s, _ := json.Marshal(&strings)
+	s, _ := json.Marshal(strings)
+	s = escapable.ReplaceAllFunc(s, escaper)
 
-	f = append(f, []byte(prefix)...)
+	f = append(f, prefix...)
 	f = append(f, 'a')
 	f = append(f, s...)
-	f = append(f, []byte(suffix)...)
+	f = append(f, suffix...)
 	return
 }
 

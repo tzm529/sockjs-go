@@ -10,7 +10,7 @@ import (
 )
 
 type jsonpProtocol struct {
-	callback string
+	callback string // read-only
 }
 
 func (p *jsonpProtocol) contentType() string { return "application/javascript; charset=UTF-8" }
