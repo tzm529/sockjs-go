@@ -1,11 +1,11 @@
 package sockjs
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
+	"unicode/utf8"
 )
 
 // callback format for htmlfile and jsonp protocols
@@ -13,7 +13,8 @@ var reCallback = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
 var escapable = regexp.MustCompile("[\x00-\x1f\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]")
 func escaper(m []byte) []byte {
-	return []byte(fmt.Sprintf(`\u%04x`, bytes.Runes(m)[0]))
+	r, _  := utf8.DecodeRune(m)
+	return []byte(fmt.Sprintf(`\u%04x`, r))
 }
 
 func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
