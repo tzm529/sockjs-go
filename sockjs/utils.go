@@ -48,3 +48,12 @@ func verifyAddr(a, b string) bool {
 	bi := strings.LastIndex(b, ":")
 	return a[:ai+1] == b[:bi+1]
 }
+
+// implicitly close the session when the handler function finishes
+// in case it doesn't get explicitly closed.
+func hfuncCloseWrapper(hfunc func(Session)) func(Session) {
+	return func(s Session) {
+		hfunc(s)
+		s.Close()
+	}
+}

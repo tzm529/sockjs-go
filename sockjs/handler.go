@@ -21,7 +21,7 @@ type Handler struct {
 func newHandler(pool *pool, prefix string, hfunc func(Session), c Config) (h *Handler) {
 	h = new(Handler)
 	h.prefix = prefix
-	h.hfunc = hfunc
+	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
 	h.pool = pool
 	return h

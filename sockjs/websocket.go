@@ -39,6 +39,7 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 
 	err = json.Unmarshal(data, &messages)
 	if err != nil {
+		s.ws.Close()
 		return nil, err
 	}
 
