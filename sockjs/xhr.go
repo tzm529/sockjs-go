@@ -25,6 +25,8 @@ func (p xhrPollingProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("", code, m, "\n"))
 }
 
+func (p xhrPollingProtocol) protocol() Protocol { return ProtocolXhrPolling }
+
 //* xhrStreaming
 
 var prelude []byte = make([]byte, 2049)
@@ -42,6 +44,8 @@ func (p xhrStreamingProtocol) writePrelude(w io.Writer) (err error) {
 	_, err = w.Write(prelude)
 	return
 }
+
+func (p xhrStreamingProtocol) protocol() Protocol { return ProtocolXhrStreaming }
 
 func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	header := w.Header()

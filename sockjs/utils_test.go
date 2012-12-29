@@ -22,6 +22,13 @@ func (s *UtilsSuite) TestCloseFrame(c *C) {
 		[]byte(`fooc[3210,"multifail"]bar`))
 }
 
+func (s *UtilsSuite) TestVerifyAddr(c *C) {
+	c.Assert(verifyAddr("foo:123", "foo:123"), Equals, true)
+	c.Assert(verifyAddr("foo:123", "foo:456"), Equals, true)
+	c.Assert(verifyAddr("foo:123", "bar:123"), Equals, false)
+	c.Assert(verifyAddr("foo:123", "bar:456"), Equals, false)
+}
+
 func (s *UtilsSuite) BenchmarkDataFrame(c *C) { 
 	for i := 0; i < c.N; i++ { 
         aframe("foo", "bar", [][]byte{

@@ -10,7 +10,7 @@ import (
 )
 
 type jsonpProtocol struct {
-	callback string // read-only
+	callback string
 }
 
 func (p *jsonpProtocol) contentType() string { return "application/javascript; charset=UTF-8" }
@@ -29,6 +29,8 @@ func (p *jsonpProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
 func (p *jsonpProtocol) writeClose(w io.Writer, code int, m string) {
 	fmt.Fprintf(w, "%s(\"c[%d,\\\"%s\\\"]\");\r\n", p.callback, code, m)
 }
+
+func (p jsonpProtocol) protocol() Protocol { return ProtocolJsonp }
 
 func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {

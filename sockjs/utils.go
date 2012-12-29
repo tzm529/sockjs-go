@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"unicode/utf8"
+	"strings"
 )
 
 // callback format for htmlfile and jsonp protocols
@@ -39,4 +40,11 @@ func cframe(prefix string, code int, m string, suffix string) []byte {
 func writeHttpClose(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(cframe("", 3000, "Go away!", "\n"))
+}
+
+// addresses match, if the ip is the same, disregard port.
+func verifyAddr(a, b string) bool {
+	ai := strings.LastIndex(a, ":")
+	bi := strings.LastIndex(b, ":")
+	return a[:ai+1] == b[:bi+1]
 }

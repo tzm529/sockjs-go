@@ -1,8 +1,9 @@
 package sockjs
 
 import (
-	"errors"
+	"net/http"
 	"sync"
+	"errors"
 )
 
 var ErrSessionClosed error = errors.New("session closed")
@@ -12,25 +13,29 @@ type Session interface {
 	Receive() ([]byte, error)
 	Send([]byte) error
 	Close() error
+	Info() RequestInfo
+	Protocol() Protocol
 }
 
 // structure for polling sessions
 type session struct {
-	mu       sync.Mutex
 	proto    protocol
-	pool     *pool // owned by Server
 	in       *queue
 	out      *queue
+
+	mu       sync.Mutex
 	closed_  bool
 	reserved bool
+	info *RequestInfo
 }
 
-func newSession(pool *pool) *session {
-	s := new(session)
-	s.pool = pool
+func (s *session) init(r *http.Request,
+	prefix string, 
+	protocol protocol,
+	headers []string) {
 	s.in = newQueue()
 	s.out = newQueue()
-	return s
+	s.info = newRequestInfo(r,prefix,headers)
 }
 
 func (s *session) Receive() ([]byte, error) {
@@ -49,6 +54,22 @@ func (s *session) Close() error {
 	s.in.close()
 	s.out.close()
 	return nil
+}
+
+func (s *session) Info() RequestInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return *s.info
+}
+
+func (s *session) Protocol() Protocol {
+	return s.proto.protocol()
+}
+
+func (s *session) setInfo(info *RequestInfo) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.info = info
 }
 
 // Reserve marks the session reserved so that other connections know not read from it.
@@ -75,4 +96,12 @@ func (s *session) closed() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.closed_
+}
+
+// VerifyAddr returns true, if the given remote address matches the one used in the last request,
+// otherwise false.
+func (s *session) verifyAddr(addr string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return verifyAddr(s.info.RemoteAddr, addr)
 }

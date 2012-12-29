@@ -16,7 +16,7 @@ type Config struct {
 	Websocket       bool
 
 	// Byte limit that can be sent over streaming session before it's closed.
-	// Default: 128 KiB
+	// Default: 131072
 	ResponseLimit   int
 
 	// Enables sticky sessions. 
@@ -32,9 +32,14 @@ type Config struct {
 	// Default: 25 seconds
 	HeartbeatDelay  time.Duration
 
-	// Disconnection timeout.
+	// Disconnection delay.
 	// Default: 5 seconds
 	DisconnectDelay time.Duration
+
+	// List of headers that are copied from incoming requests to SessionInfo.
+	// Default: []string{"referer", "x-client-ip", "x-forwarded-for",
+	//                   "x-cluster-client-ip", "via", "x-real-ip", "host"}
+	Headers []string
 
 	iframePage []byte
 	iframeHash string
@@ -48,6 +53,8 @@ func NewConfig() (c Config) {
 	c.VerifyAddr = true
 	c.HeartbeatDelay = time.Duration(25) * time.Second
 	c.DisconnectDelay = time.Duration(5) * time.Second
+	c.Headers = []string{"referer", "x-client-ip", "x-forwarded-for",
+	"x-cluster-client-ip", "via", "x-real-ip", "host"}
 
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()

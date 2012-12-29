@@ -29,7 +29,7 @@ func (p *pool) getOrCreate(sessid string) (s *session, exists bool) {
 	if exists {
 		return
 	}
-	p.pool[sessid] = newSession(p)
+	p.pool[sessid] = new(session)
 	s = p.pool[sessid]
 	return
 }

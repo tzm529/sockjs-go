@@ -24,7 +24,7 @@ const (
 )
 
 type htmlfileProtocol struct {
-	callback string // read-only
+	callback string
 }
 
 func (p *htmlfileProtocol) contentType() string { return "text/html; charset=UTF-8" }
@@ -53,6 +53,8 @@ func (p *htmlfileProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error
 func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("<script>\np(\"", code, m, "\");\n</script>\r\n"))
 }
+
+func (p htmlfileProtocol) protocol() Protocol { return ProtocolHtmlfile }
 
 func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {

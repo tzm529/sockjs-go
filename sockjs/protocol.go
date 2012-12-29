@@ -11,6 +11,7 @@ type protocol interface {
 	writeOpen(io.Writer) error
 	writeData(io.Writer, ...[]byte) (int, error)
 	writeClose(io.Writer, int, string)
+	protocol() Protocol
 }
 
 type streamingProtocol interface {
@@ -37,6 +38,7 @@ func pollingHandler(h *Handler,
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
 		return
 	}
@@ -47,6 +49,11 @@ func pollingHandler(h *Handler,
 		return
 	}
 	defer s.free()
+
+	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
+		p.writeClose(w, 2500, "Remote address mismatch")
+		return
+	}
 
 	m, err := s.out.pullAll()
 	if err != nil {
@@ -102,6 +109,7 @@ func streamingHandler(h *Handler,
 		h.pool.remove(sessid)
 		return
 	success:
+		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
 	}
 
@@ -112,6 +120,11 @@ func streamingHandler(h *Handler,
 		return
 	}
 	defer s.free()
+
+	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
+		p.writeClose(w, 2500, "Remote address mismatch")
+		return
+	}
 
 	for sent := 0; sent < h.config.ResponseLimit; {
 		m, err := s.out.pullAll()

@@ -11,6 +11,7 @@ import (
 type websocketSession struct {
 	in *queue
 	ws *websocket.Conn
+	info *RequestInfo
 }
 
 func (s *websocketSession) Receive() (m []byte, err error) {
@@ -69,23 +70,27 @@ func (s *websocketSession) Close() (err error) {
 	return
 }
 
+func (p *websocketSession) Info() RequestInfo { return *p.info }
+func (s *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
+
 func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return
 	}
 
-	if r.Header.Get("Sec-WebSocket-Version") == "13" && r.Header.Get("Origin") == "" {
-		r.Header.Set("Origin", r.Header.Get("Sec-WebSocket-Origin"))
+	header := r.Header
+	if header.Get("Sec-WebSocket-Version") == "13" && header.Get("Origin") == "" {
+		header.Set("Origin", header.Get("Sec-WebSocket-Origin"))
 	}
-	if strings.ToLower(r.Header.Get("Upgrade")) != "websocket" {
+	if strings.ToLower(header.Get("Upgrade")) != "websocket" {
 		http.Error(w, `Can "Upgrade" only to "WebSocket".`, http.StatusBadRequest)
 		return
 	}
 
-	conn := strings.ToLower(r.Header.Get("Connection"))
+	conn := strings.ToLower(header.Get("Connection"))
 	if conn == "keep-alive, upgrade" {
-		r.Header.Set("Connection", "Upgrade")
+		header.Set("Connection", "Upgrade")
 	} else if conn != "upgrade" {
 		http.Error(w, `"Connection" must be "Upgrade".`, http.StatusBadRequest)
 		return
@@ -102,6 +107,7 @@ func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 		s := new(websocketSession)
 		s.in = newQueue()
 		s.ws = ws
+		s.info = newRequestInfo(r, h.prefix, h.config.Headers)
 		h.hfunc(s)
 	})
 
