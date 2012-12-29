@@ -1,9 +1,9 @@
 package sockjs
 
 import (
+	"errors"
 	"net/http"
 	"sync"
-	"errors"
 )
 
 var ErrSessionClosed error = errors.New("session closed")
@@ -19,23 +19,24 @@ type Session interface {
 
 // structure for polling sessions
 type session struct {
-	proto    protocol
-	in       *queue
-	out      *queue
+	proto protocol
+	in    *queue
+	out   *queue
 
-	mu       sync.Mutex
-	closed_  bool
-	reserved bool
-	info *RequestInfo
+	mu           sync.Mutex
+	closed_      bool
+	interrupted_ bool
+	reserved     bool
+	info         *RequestInfo
 }
 
 func (s *session) init(r *http.Request,
-	prefix string, 
+	prefix string,
 	protocol protocol,
 	headers []string) {
 	s.in = newQueue()
 	s.out = newQueue()
-	s.info = newRequestInfo(r,prefix,headers)
+	s.info = newRequestInfo(r, prefix, headers)
 }
 
 func (s *session) Receive() ([]byte, error) {
@@ -96,6 +97,20 @@ func (s *session) closed() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.closed_
+}
+
+// Interrupted returns true, if the session was interrupted.
+func (s *session) interrupted() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.interrupted_
+}
+
+// Interrupt marks the session as interrupted.
+func (s *session) interrupt() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.interrupted_ = true
 }
 
 // VerifyAddr returns true, if the given remote address matches the one used in the last request,

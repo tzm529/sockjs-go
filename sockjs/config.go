@@ -9,15 +9,15 @@ import (
 type Config struct {
 	// URL for SockJS client library.
 	// Default: "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
-	SockjsURL       string
+	SockjsURL string
 
 	// Enables websocket transport.
 	// Default: true
-	Websocket       bool
+	Websocket bool
 
 	// Byte limit that can be sent over streaming session before it's closed.
 	// Default: 131072
-	ResponseLimit   int
+	ResponseLimit int
 
 	// Enables sticky sessions. 
 	// Default: false.
@@ -30,7 +30,7 @@ type Config struct {
 
 	// Heartbeat delay.
 	// Default: 25 seconds
-	HeartbeatDelay  time.Duration
+	HeartbeatDelay time.Duration
 
 	// Disconnection delay.
 	// Default: 5 seconds
@@ -54,7 +54,7 @@ func NewConfig() (c Config) {
 	c.HeartbeatDelay = time.Duration(25) * time.Second
 	c.DisconnectDelay = time.Duration(5) * time.Second
 	c.Headers = []string{"referer", "x-client-ip", "x-forwarded-for",
-	"x-cluster-client-ip", "via", "x-real-ip", "host"}
+		"x-cluster-client-ip", "via", "x-real-ip", "host"}
 
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()

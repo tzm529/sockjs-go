@@ -43,17 +43,24 @@ func pollingHandler(h *Handler,
 		return
 	}
 
-	fail := s.reserve()
-	if fail {
-		p.writeClose(w, 2010, "Another connection still open")
-		return
-	}
-	defer s.free()
-
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
 		p.writeClose(w, 2500, "Remote address mismatch")
 		return
 	}
+
+	if s.interrupted() {
+		p.writeClose(w, 1002, "Connection interrupted")
+		return
+	}
+
+	fail := s.reserve()
+	if fail {
+		s.interrupt()
+		s.Close()
+		p.writeClose(w, 2010, "Another connection still open")
+		return
+	}
+	defer s.free()
 
 	m, err := s.out.pullAll()
 	if err != nil {
@@ -113,18 +120,27 @@ func streamingHandler(h *Handler,
 		go h.hfunc(s)
 	}
 
+	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
+		p.writeClose(chunkedw, 2500, "Remote address mismatch")
+		bufrw.Flush()
+		return
+	}
+
+	if s.interrupted() {
+		p.writeClose(chunkedw, 1002, "Connection interrupted")
+		bufrw.Flush()
+		return
+	}
+
 	fail := s.reserve()
 	if fail {
+		s.interrupt()
+		s.Close()
 		p.writeClose(chunkedw, 2010, "Another connection still open")
 		bufrw.Flush()
 		return
 	}
 	defer s.free()
-
-	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.writeClose(w, 2500, "Remote address mismatch")
-		return
-	}
 
 	for sent := 0; sent < h.config.ResponseLimit; {
 		m, err := s.out.pullAll()

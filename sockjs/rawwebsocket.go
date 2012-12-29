@@ -5,8 +5,8 @@ import (
 	"net/http"
 )
 
-type rawWebsocketSession struct{ 
-	ws *websocket.Conn
+type rawWebsocketSession struct {
+	ws   *websocket.Conn
 	info *RequestInfo
 }
 
@@ -29,7 +29,7 @@ func (p *rawWebsocketSession) Close() error {
 	return p.ws.Close()
 }
 
-func (p *rawWebsocketSession) Info() RequestInfo { return *p.info }
+func (p *rawWebsocketSession) Info() RequestInfo  { return *p.info }
 func (s *rawWebsocketSession) Protocol() Protocol { return ProtocolRawWebsocket }
 
 func rawWebsocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {

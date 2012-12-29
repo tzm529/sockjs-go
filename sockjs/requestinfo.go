@@ -1,13 +1,13 @@
 package sockjs
 
 import (
-	"net/url"
 	"net/http"
+	"net/url"
 )
 
 type Protocol uint8
 
-const(
+const (
 	ProtocolRawWebsocket Protocol = iota
 	ProtocolWebsocket
 	ProtocolXhrPolling
@@ -20,28 +20,28 @@ const(
 // RequestInfo contains information copied from the last received request associated with the session.
 type RequestInfo struct {
 	// URL which was sought.
-    URL    url.URL
+	URL url.URL
 
 	// Copy of the HTTP headers listed in Config.Headers.
-    Header http.Header
+	Header http.Header
 
 	// Host on which the URL was sought.
-    Host string
+	Host string
 
 	// Remote address of the client in "IP:port" format.
-    RemoteAddr string
+	RemoteAddr string
 
 	// RequestURI is the unmodified Request-URI of the
-    // Request-Line (RFC 2616, Section 5.1) as sent by the client
-    // to a server. Usually the URL field should be used instead.
-    RequestURI string
+	// Request-Line (RFC 2616, Section 5.1) as sent by the client
+	// to a server. Usually the URL field should be used instead.
+	RequestURI string
 
 	// Prefix of the URL on which the request was handled.
 	Prefix string
 }
 
-func newRequestInfo(r *http.Request, 
-	prefix string, 
+func newRequestInfo(r *http.Request,
+	prefix string,
 	headers []string) (info *RequestInfo) {
 	info = new(RequestInfo)
 	info.URL = *r.URL
@@ -51,7 +51,7 @@ func newRequestInfo(r *http.Request,
 	info.Prefix = prefix
 
 	h := r.Header
-	for _,k := range headers {
+	for _, k := range headers {
 		k = http.CanonicalHeaderKey(k)
 		klen := len(h[k])
 		if klen > 0 {

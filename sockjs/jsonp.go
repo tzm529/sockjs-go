@@ -1,11 +1,11 @@
 package sockjs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"bytes"
 	"net/url"
 )
 
@@ -72,7 +72,7 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 	switch r.Header.Get("Content-Type") {
 	case "application/x-www-form-urlencoded":
 		m, err := url.ParseQuery(buf.String())
-		if err != nil { 
+		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

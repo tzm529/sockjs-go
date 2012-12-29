@@ -5,21 +5,22 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
-	"unicode/utf8"
 	"strings"
+	"unicode/utf8"
 )
 
 // callback format for htmlfile and jsonp protocols
 var reCallback = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 
 var escapable = regexp.MustCompile("[\x00-\x1f\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufff0-\uffff]")
+
 func escaper(m []byte) []byte {
-	r, _  := utf8.DecodeRune(m)
+	r, _ := utf8.DecodeRune(m)
 	return []byte(fmt.Sprintf(`\u%04x`, r))
 }
 
 func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
- 	strings := make([]string, len(m))
+	strings := make([]string, len(m))
 	for i := range m {
 		strings[i] = string(m[i])
 	}

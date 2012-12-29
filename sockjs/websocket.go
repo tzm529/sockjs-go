@@ -9,8 +9,8 @@ import (
 )
 
 type websocketSession struct {
-	in *queue
-	ws *websocket.Conn
+	in   *queue
+	ws   *websocket.Conn
 	info *RequestInfo
 }
 
@@ -71,7 +71,7 @@ func (s *websocketSession) Close() (err error) {
 	return
 }
 
-func (p *websocketSession) Info() RequestInfo { return *p.info }
+func (p *websocketSession) Info() RequestInfo  { return *p.info }
 func (s *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
 
 func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {

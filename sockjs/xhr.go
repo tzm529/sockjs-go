@@ -1,9 +1,9 @@
 package sockjs
 
 import (
-	"net/http"
-	"io"
 	"encoding/json"
+	"io"
+	"net/http"
 )
 
 //* xhrPolling
@@ -75,7 +75,7 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 	for _, v := range messages {
 		s.in.push([]byte(v))
 	}
-	
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
