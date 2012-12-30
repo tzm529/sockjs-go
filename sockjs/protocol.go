@@ -1,6 +1,7 @@
 package sockjs
 
 import (
+	"bufio"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -70,6 +71,33 @@ func pollingHandler(h *Handler,
 	p.writeData(w, m...)
 }
 
+// little helper to simplify streaming handler code
+type streamWriter struct {
+	bufrw *bufio.ReadWriter
+	wc io.WriteCloser
+}
+
+func newStreamWriter(bufrw *bufio.ReadWriter) (sw *streamWriter) {
+	sw = new(streamWriter)
+	sw.bufrw = bufrw
+	sw.wc = httputil.NewChunkedWriter(bufrw)
+	return
+}
+
+func (sw *streamWriter) Write(b []byte) (n int, err error) {
+	n, err = sw.wc.Write(b)
+	if err != nil { return 0, err }
+	err = sw.bufrw.Flush()
+	if err != nil { return 0, err }
+	return
+}
+
+func (sw *streamWriter) Close() error {
+	sw.wc.Close()
+	sw.bufrw.Write([]byte("\r\n")) // close for chunked data
+	return sw.bufrw.Flush()
+}
+
 func streamingHandler(h *Handler,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -88,47 +116,32 @@ func streamingHandler(h *Handler,
 	}
 	defer conn.Close()
 
-	chunkedw := httputil.NewChunkedWriter(bufrw)
-	defer func() {
-		chunkedw.Close()
-		bufrw.Write([]byte("\r\n")) // close for chunked data
-		bufrw.Flush()
-	}()
+	sw := newStreamWriter(bufrw)
+	defer sw.Close()
 
-	if err = p.writePrelude(chunkedw); err != nil {
-		return
-	}
-	if err = bufrw.Flush(); err != nil {
+	if err = p.writePrelude(sw); err != nil {
 		return
 	}
 
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = p.writeOpen(chunkedw); err != nil {
-			goto fail
+		if err = p.writeOpen(sw); err != nil {
+			h.pool.remove(sessid)
+			return
 		}
-		if err = bufrw.Flush(); err != nil {
-			goto fail
-		}
-		goto success
-	fail:
-		h.pool.remove(sessid)
-		return
-	success:
+
 		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
 	}
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.writeClose(chunkedw, 2500, "Remote address mismatch")
-		bufrw.Flush()
+		p.writeClose(sw, 2500, "Remote address mismatch")
 		return
 	}
 
 	if s.interrupted() {
-		p.writeClose(chunkedw, 1002, "Connection interrupted")
-		bufrw.Flush()
+		p.writeClose(sw, 1002, "Connection interrupted")
 		return
 	}
 
@@ -136,8 +149,7 @@ func streamingHandler(h *Handler,
 	if fail {
 		s.interrupt()
 		s.Close()
-		p.writeClose(chunkedw, 2010, "Another connection still open")
-		bufrw.Flush()
+		p.writeClose(sw, 2010, "Another connection still open")
 		return
 	}
 	defer s.free()
@@ -145,16 +157,12 @@ func streamingHandler(h *Handler,
 	for sent := 0; sent < h.config.ResponseLimit; {
 		m, err := s.out.pullAll()
 		if err != nil {
-			p.writeClose(chunkedw, 3000, "Go away!")
-			bufrw.Flush()
+			p.writeClose(sw, 3000, "Go away!")
 			return
 		}
 
-		n, err := p.writeData(chunkedw, m...)
+		n, err := p.writeData(sw, m...)
 		if err != nil {
-			return
-		}
-		if err = bufrw.Flush(); err != nil {
 			return
 		}
 		sent += n
