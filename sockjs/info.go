@@ -25,17 +25,18 @@ func newInfoData(ws bool) infoData {
 func infoHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
 	header.Add("Content-Type", "application/json; charset=UTF-8")
-	disableCache(header)
-	preflight(header, r)
+	xhrCors(header, r)
+	noCache(header)
 	w.WriteHeader(http.StatusOK)
 	json, _ := json.Marshal(newInfoData(h.config.Websocket))
 	w.Write(json)
 }
 
-func infoOptionsHandler(w http.ResponseWriter, r *http.Request) {
-	h := w.Header()
-	h.Add("Access-Control-Allow-Methods", "OPTIONS, GET")
-	preflight(h, r)
-	enableCache(h)
+func infoOptionsHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Methods", "OPTIONS, GET")
+	sid(h, w, r)
+	xhrCors(header, r)
+	enableCache(header)
 	w.WriteHeader(http.StatusNoContent)
 }

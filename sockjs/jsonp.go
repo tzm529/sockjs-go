@@ -30,7 +30,7 @@ func (p *jsonpProtocol) writeClose(w io.Writer, code int, m string) {
 	fmt.Fprintf(w, "%s(\"c[%d,\\\"%s\\\"]\");\r\n", p.callback, code, m)
 }
 
-func (p *jsonpProtocol) protocol() Protocol { return ProtocolJsonp }
+func (p *jsonpProtocol) protocol() Protocol       { return ProtocolJsonp }
 func (p *jsonpProtocol) streaming() preludeWriter { return nil }
 
 func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
@@ -57,8 +57,8 @@ func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid str
 func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	header := w.Header()
 	header.Add("Content-Type", "text/plain; charset=UTF-8")
-	preflight(header, r)
-	disableCache(header)
+	sid(h, w, r)
+	noCache(header)
 
 	s := h.pool.get(sessid)
 	if s == nil {

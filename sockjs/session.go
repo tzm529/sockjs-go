@@ -110,7 +110,7 @@ func (s *session) interrupted() bool {
 func (s *session) interrupt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.closed_ = true	
+	s.closed_ = true
 	s.interrupted_ = true
 }
 

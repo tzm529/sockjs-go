@@ -54,7 +54,7 @@ func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("<script>\np(\"", code, m, "\");\n</script>\r\n"))
 }
 
-func (p *htmlfileProtocol) protocol() Protocol { return ProtocolHtmlfile }
+func (p *htmlfileProtocol) protocol() Protocol       { return ProtocolHtmlfile }
 func (p *htmlfileProtocol) streaming() preludeWriter { return p }
 
 func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {

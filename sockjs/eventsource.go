@@ -27,5 +27,5 @@ func (p eventSourceProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("data: ", code, m, "\r\n\r\n"))
 }
 
-func (p eventSourceProtocol) protocol() Protocol { return ProtocolEventSource }
+func (p eventSourceProtocol) protocol() Protocol       { return ProtocolEventSource }
 func (p eventSourceProtocol) streaming() preludeWriter { return p }

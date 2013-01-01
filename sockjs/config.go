@@ -3,12 +3,13 @@ package sockjs
 import (
 	"crypto/md5"
 	"fmt"
+	"net/http"
 	"time"
 )
 
 type Config struct {
 	// URL for SockJS client library.
-	// Default: "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
+	// Default: "https://cdn.sockjs.org/sockjs-0.3.4.min.js"
 	SockjsURL string
 
 	// Enables websocket transport.
@@ -16,12 +17,16 @@ type Config struct {
 	Websocket bool
 
 	// Byte limit that can be sent over streaming session before it's closed.
-	// Default: 131072
+	// Default: 128 * 1024
 	ResponseLimit int
 
-	// Enables sticky sessions. 
+	// Adds JSESSIONID cookie to requests to enable sticky sessions.
+	// Dummy value is used unless JsessionFunc is set.
 	// Default: false.
 	Jsessionid bool
+
+	// Function that is called to set the JSESSIONID cookie, if Jsessionid setting is set.
+	JsessionidFunc func(http.ResponseWriter, *http.Request)
 
 	// Enables IP-address checks for polling transports. 
 	// If enabled, all subsequent polling calls must be from the same IP-address.
@@ -46,10 +51,9 @@ type Config struct {
 }
 
 func NewConfig() (c Config) {
-	c.SockjsURL = "http://cdn.sockjs.org/sockjs-0.3.4.min.js"
+	c.SockjsURL = "https://cdn.sockjs.org/sockjs-0.3.4.min.js"
 	c.Websocket = true
-	c.ResponseLimit = 131072 // 128 KiB
-	c.Jsessionid = false
+	c.ResponseLimit = 128 * 1024
 	c.VerifyAddr = true
 	c.HeartbeatDelay = time.Duration(25) * time.Second
 	c.DisconnectDelay = time.Duration(5) * time.Second

@@ -25,7 +25,7 @@ func (p xhrPollingProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("", code, m, "\n"))
 }
 
-func (p xhrPollingProtocol) protocol() Protocol { return ProtocolXhrPolling }
+func (p xhrPollingProtocol) protocol() Protocol       { return ProtocolXhrPolling }
 func (p xhrPollingProtocol) streaming() preludeWriter { return nil }
 
 //* xhrStreaming
@@ -46,14 +46,15 @@ func (p xhrStreamingProtocol) writePrelude(w io.Writer) (err error) {
 	return
 }
 
-func (p xhrStreamingProtocol) protocol() Protocol { return ProtocolXhrStreaming }
+func (p xhrStreamingProtocol) protocol() Protocol       { return ProtocolXhrStreaming }
 func (p xhrStreamingProtocol) streaming() preludeWriter { return p }
 
 func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	header := w.Header()
 	header.Add("Content-Type", "text/plain; charset=UTF-8")
-	preflight(header, r)
-	disableCache(header)
+	sid(h, w, r)
+	xhrCors(header, r)
+	noCache(header)
 
 	s := h.pool.get(sessid)
 	if s == nil {
@@ -81,10 +82,11 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func xhrOptionsHandler(w http.ResponseWriter, r *http.Request) {
-	h := w.Header()
-	h.Add("Access-Control-Allow-Methods", "OPTIONS, POST")
-	preflight(h, r)
-	enableCache(h)
+func xhrOptionsHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Methods", "OPTIONS, POST")
+	sid(h, w, r)
+	xhrCors(header, r)
+	enableCache(header)
 	w.WriteHeader(http.StatusNoContent)
 }

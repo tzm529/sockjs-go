@@ -9,6 +9,11 @@ import (
 	"unicode/utf8"
 )
 
+var dummyCookie = &http.Cookie{
+	Name:  "JSESSIONID",
+	Value: "dummy",
+}
+
 // callback format for htmlfile and jsonp protocols
 var reCallback = regexp.MustCompile("[^a-zA-Z0-9-_.]")
 

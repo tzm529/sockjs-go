@@ -26,7 +26,7 @@ type preludeWriter interface {
 
 type streamWriter struct {
 	bufrw *bufio.ReadWriter
-	wc io.WriteCloser
+	wc    io.WriteCloser
 }
 
 func newStreamWriter(bufrw *bufio.ReadWriter) io.WriteCloser {
@@ -38,9 +38,13 @@ func newStreamWriter(bufrw *bufio.ReadWriter) io.WriteCloser {
 
 func (sw *streamWriter) Write(b []byte) (n int, err error) {
 	n, err = sw.wc.Write(b)
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	err = sw.bufrw.Flush()
-	if err != nil { return 0, err }
+	if err != nil {
+		return 0, err
+	}
 	return
 }
 
@@ -53,8 +57,8 @@ func (sw *streamWriter) Close() error {
 func sessionHeader(w http.ResponseWriter, r *http.Request, p protocol) {
 	header := w.Header()
 	header.Add("Content-Type", p.contentType())
-	disableCache(header)
-	preflight(header, r)
+	noCache(header)
+	xhrCors(header, r)
 }
 
 func protocolHandler(h *Handler,
@@ -62,14 +66,14 @@ func protocolHandler(h *Handler,
 	r *http.Request,
 	sessid string,
 	p protocol) {
-	var err error	
+	var err error
 	var w io.Writer
 	pw := p.streaming()
 
 	header := rw.Header()
 	header.Add("Content-Type", p.contentType())
-	disableCache(header)
-	preflight(header, r)
+	sid(h, rw, r)
+	noCache(header)
 
 	if pw != nil {
 		rw.WriteHeader(http.StatusOK)
@@ -101,7 +105,9 @@ func protocolHandler(h *Handler,
 		}
 		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
-		if pw == nil { return }
+		if pw == nil {
+			return
+		}
 	}
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
@@ -137,7 +143,7 @@ func protocolHandler(h *Handler,
 				p.writeClose(w, 3000, "Go away!")
 				return
 			}
-			
+
 			n, err := p.writeData(w, m...)
 			if err != nil {
 				return

@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+var reGreeting = regexp.MustCompile(`^/?$`)
 var reInfo = regexp.MustCompile(`^/info$`)
 var reIframe = regexp.MustCompile(`^/iframe[\w\d-\. ]*\.html$`)
 var reSessionUrl = regexp.MustCompile(
@@ -30,17 +31,18 @@ func newHandler(pool *pool, prefix string, hfunc func(Session), c Config) (h *Ha
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len(h.prefix):]
 	method := r.Method
+	header := w.Header()
 	println("ServeHTTP:", path, method)
 
 	switch {
-	case method == "GET" && path == "" || path == "/":
+	case method == "GET" && reGreeting.MatchString(path):
 		greetingHandler(w)
-	case method == "GET" && reInfo.MatchString(path):
-		infoHandler(h, w, r)
-	case method == "OPTIONS" && reInfo.MatchString(path):
-		infoOptionsHandler(w, r)
 	case method == "GET" && reIframe.MatchString(path):
 		iframeHandler(h, w, r)
+	case method == "OPTIONS" && reInfo.MatchString(path):
+		infoOptionsHandler(h, w, r)
+	case method == "GET" && reInfo.MatchString(path):
+		infoHandler(h, w, r)
 	case method == "GET" && reRawWebsocket.MatchString(path):
 		rawWebsocketHandler(h, w, r)
 	case method == "GET" && reSessionUrl.MatchString(path):
@@ -65,16 +67,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketPostHandler(w, r)
 		case "xhr":
+			xhrCors(header, r)
 			protocolHandler(h, w, r, sessid, xhrPollingProtocol{})
 		case "xhr_streaming":
+			xhrCors(header, r)
 			protocolHandler(h, w, r, sessid, xhrStreamingProtocol{})
 		case "xhr_send":
+			xhrCors(header, r)
 			xhrSendHandler(h, w, r, sessid)
 		case "jsonp_send":
 			jsonpSendHandler(h, w, r, sessid)
 		}
 	case method == "OPTIONS" && reSessionUrl.MatchString(path):
-		xhrOptionsHandler(w, r)
+		xhrOptionsHandler(h, w, r)
 	default:
 		http.NotFound(w, r)
 	}
