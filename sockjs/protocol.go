@@ -78,16 +78,22 @@ func protocolHandler(h *Handler,
 	if pw != nil {
 		rw.WriteHeader(http.StatusOK)
 
-		conn, bufrw, err := rw.(http.Hijacker).Hijack()
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer conn.Close()
+		// use chunked format for http/1.1.
+		// http/ 1.0 does not support it.
+		if r.ProtoMinor == 1 {
+			conn, bufrw, err := rw.(http.Hijacker).Hijack()
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			defer conn.Close()
 
-		wc := newStreamWriter(bufrw)
-		defer wc.Close()
-		w = wc
+			wc := newStreamWriter(bufrw)
+			defer wc.Close()
+			w = wc
+		} else {
+			w = rw
+		}
 
 		if err = pw.writePrelude(w); err != nil {
 			return
