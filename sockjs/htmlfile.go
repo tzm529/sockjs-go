@@ -54,7 +54,8 @@ func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) {
 	w.Write(cframe("<script>\np(\"", code, m, "\");\n</script>\r\n"))
 }
 
-func (p htmlfileProtocol) protocol() Protocol { return ProtocolHtmlfile }
+func (p *htmlfileProtocol) protocol() Protocol { return ProtocolHtmlfile }
+func (p *htmlfileProtocol) streaming() preludeWriter { return p }
 
 func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {
@@ -74,5 +75,5 @@ func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid 
 
 	p := new(htmlfileProtocol)
 	p.callback = callback
-	streamingHandler(h, w, r, sessid, p)
+	protocolHandler(h, w, r, sessid, p)
 }

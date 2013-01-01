@@ -28,3 +28,4 @@ func (p eventSourceProtocol) writeClose(w io.Writer, code int, m string) {
 }
 
 func (p eventSourceProtocol) protocol() Protocol { return ProtocolEventSource }
+func (p eventSourceProtocol) streaming() preludeWriter { return p }

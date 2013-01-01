@@ -51,7 +51,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketHandler(h, w, r)
 		case "eventsource":
-			streamingHandler(h, w, r, sessid, eventSourceProtocol{})
+			protocolHandler(h, w, r, sessid, eventSourceProtocol{})
 		case "htmlfile":
 			htmlfileHandler(h, w, r, sessid)
 		case "jsonp":
@@ -65,9 +65,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketPostHandler(w, r)
 		case "xhr":
-			pollingHandler(h, w, r, sessid, xhrPollingProtocol{})
+			protocolHandler(h, w, r, sessid, xhrPollingProtocol{})
 		case "xhr_streaming":
-			streamingHandler(h, w, r, sessid, xhrStreamingProtocol{})
+			protocolHandler(h, w, r, sessid, xhrStreamingProtocol{})
 		case "xhr_send":
 			xhrSendHandler(h, w, r, sessid)
 		case "jsonp_send":

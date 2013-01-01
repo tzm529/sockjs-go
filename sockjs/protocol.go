@@ -13,75 +13,27 @@ type protocol interface {
 	writeData(io.Writer, ...[]byte) (int, error)
 	writeClose(io.Writer, int, string)
 	protocol() Protocol
+
+	// returns a preludeWriter or nil, if the protocol is not streaming.
+	streaming() preludeWriter
 }
 
-type streamingProtocol interface {
-	protocol
+type preludeWriter interface {
 	writePrelude(io.Writer) error
 }
 
-func pollingHandler(h *Handler,
-	w http.ResponseWriter,
-	r *http.Request,
-	sessid string,
-	p protocol) {
-	var err error
-	header := w.Header()
-	header.Add("Content-Type", p.contentType())
-	disableCache(header)
-	preflight(header, r)
+//* helpers to reduce duplicate code in polling and streaming handlers
 
-	s, exists := h.pool.getOrCreate(sessid)
-	if !exists {
-		// initiate connection
-		if err = p.writeOpen(w); err != nil {
-			h.pool.remove(sessid)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		s.init(r, h.prefix, p, h.config.Headers)
-		go h.hfunc(s)
-		return
-	}
-
-	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.writeClose(w, 2500, "Remote address mismatch")
-		return
-	}
-
-	if s.interrupted() {
-		p.writeClose(w, 1002, "Connection interrupted")
-		return
-	}
-
-	fail := s.reserve()
-	if fail {
-		s.interrupt()
-		s.Close()
-		p.writeClose(w, 2010, "Another connection still open")
-		return
-	}
-	defer s.free()
-
-	m, err := s.out.pullAll()
-	if err != nil {
-		p.writeClose(w, 3000, "Go away!")
-		return
-	}
-	p.writeData(w, m...)
-}
-
-// little helper to simplify streaming handler code
 type streamWriter struct {
 	bufrw *bufio.ReadWriter
 	wc io.WriteCloser
 }
 
-func newStreamWriter(bufrw *bufio.ReadWriter) (sw *streamWriter) {
-	sw = new(streamWriter)
+func newStreamWriter(bufrw *bufio.ReadWriter) io.WriteCloser {
+	sw := new(streamWriter)
 	sw.bufrw = bufrw
 	sw.wc = httputil.NewChunkedWriter(bufrw)
-	return
+	return sw
 }
 
 func (sw *streamWriter) Write(b []byte) (n int, err error) {
@@ -98,73 +50,99 @@ func (sw *streamWriter) Close() error {
 	return sw.bufrw.Flush()
 }
 
-func streamingHandler(h *Handler,
-	w http.ResponseWriter,
-	r *http.Request,
-	sessid string,
-	p streamingProtocol) {
+func sessionHeader(w http.ResponseWriter, r *http.Request, p protocol) {
 	header := w.Header()
 	header.Add("Content-Type", p.contentType())
 	disableCache(header)
 	preflight(header, r)
-	w.WriteHeader(http.StatusOK)
+}
 
-	conn, bufrw, err := w.(http.Hijacker).Hijack()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close()
+func protocolHandler(h *Handler,
+	rw http.ResponseWriter,
+	r *http.Request,
+	sessid string,
+	p protocol) {
+	var err error	
+	var w io.Writer
+	pw := p.streaming()
 
-	sw := newStreamWriter(bufrw)
-	defer sw.Close()
+	header := rw.Header()
+	header.Add("Content-Type", p.contentType())
+	disableCache(header)
+	preflight(header, r)
 
-	if err = p.writePrelude(sw); err != nil {
-		return
+	if pw != nil {
+		rw.WriteHeader(http.StatusOK)
+
+		conn, bufrw, err := rw.(http.Hijacker).Hijack()
+		if err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer conn.Close()
+
+		wc := newStreamWriter(bufrw)
+		defer wc.Close()
+		w = wc
+
+		if err = pw.writePrelude(w); err != nil {
+			return
+		}
+	} else {
+		w = rw
 	}
 
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = p.writeOpen(sw); err != nil {
+		if err = p.writeOpen(w); err != nil {
 			h.pool.remove(sessid)
 			return
 		}
-
 		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
+		if pw == nil { return }
 	}
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.writeClose(sw, 2500, "Remote address mismatch")
+		p.writeClose(w, 2500, "Remote address mismatch")
 		return
 	}
 
 	if s.interrupted() {
-		p.writeClose(sw, 1002, "Connection interrupted")
+		p.writeClose(w, 1002, "Connection interrupted")
 		return
 	}
 
 	fail := s.reserve()
 	if fail {
 		s.interrupt()
-		s.Close()
-		p.writeClose(sw, 2010, "Another connection still open")
+		//s.Close()
+		p.writeClose(w, 2010, "Another connection still open")
 		return
 	}
 	defer s.free()
 
-	for sent := 0; sent < h.config.ResponseLimit; {
+	if pw == nil {
 		m, err := s.out.pullAll()
 		if err != nil {
-			p.writeClose(sw, 3000, "Go away!")
+			p.writeClose(w, 3000, "Go away!")
 			return
 		}
-
-		n, err := p.writeData(sw, m...)
-		if err != nil {
-			return
+		p.writeData(w, m...)
+	} else {
+		for sent := 0; sent < h.config.ResponseLimit; {
+			m, err := s.out.pullAll()
+			if err != nil {
+				p.writeClose(w, 3000, "Go away!")
+				return
+			}
+			
+			n, err := p.writeData(w, m...)
+			if err != nil {
+				return
+			}
+			sent += n
 		}
-		sent += n
 	}
 }

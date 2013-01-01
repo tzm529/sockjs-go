@@ -106,10 +106,11 @@ func (s *session) interrupted() bool {
 	return s.interrupted_
 }
 
-// Interrupt marks the session as interrupted.
+// Interrupt closes the session and marks it as interrupted.
 func (s *session) interrupt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.closed_ = true	
 	s.interrupted_ = true
 }
 
