@@ -54,13 +54,6 @@ func (sw *streamWriter) Close() error {
 	return sw.bufrw.Flush()
 }
 
-func sessionHeader(w http.ResponseWriter, r *http.Request, p protocol) {
-	header := w.Header()
-	header.Add("Content-Type", p.contentType())
-	noCache(header)
-	xhrCors(header, r)
-}
-
 func protocolHandler(h *Handler,
 	rw http.ResponseWriter,
 	r *http.Request,
