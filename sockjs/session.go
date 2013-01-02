@@ -19,7 +19,7 @@ type Session interface {
 
 // structure for polling sessions
 type session struct {
-	proto protocol
+	proto protocol // read-only
 	in    *queue
 	out   *queue
 
@@ -32,8 +32,9 @@ type session struct {
 
 func (s *session) init(r *http.Request,
 	prefix string,
-	protocol protocol,
+	proto protocol,
 	headers []string) {
+	s.proto = proto
 	s.in = newQueue()
 	s.out = newQueue()
 	s.info = newRequestInfo(r, prefix, headers)
@@ -48,6 +49,7 @@ func (s *session) Send(m []byte) error {
 	return nil
 }
 
+// Close marks the connection closed and closes the underlying message queues.
 func (s *session) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -106,7 +108,7 @@ func (s *session) interrupted() bool {
 	return s.interrupted_
 }
 
-// Interrupt closes the session and marks it as interrupted.
+// Interrupt marks the session closed and interrupted.
 func (s *session) interrupt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
