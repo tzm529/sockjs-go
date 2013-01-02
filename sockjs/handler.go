@@ -19,12 +19,12 @@ type Handler struct {
 	pool   *pool
 }
 
-func newHandler(pool *pool, prefix string, hfunc func(Session), c Config) (h *Handler) {
+func newHandler(prefix string, hfunc func(Session), c Config) (h *Handler) {
 	h = new(Handler)
 	h.prefix = prefix
 	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
-	h.pool = pool
+	h.pool = newPool(h.config.DisconnectDelay)
 	return h
 }
 
@@ -32,7 +32,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len(h.prefix):]
 	method := r.Method
 	header := w.Header()
-	println("ServeHTTP:", path, method)
 
 	switch {
 	case method == "GET" && reGreeting.MatchString(path):
@@ -83,4 +82,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (h *Handler) close() {
+	h.pool.close()
 }

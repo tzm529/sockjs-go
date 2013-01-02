@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var ErrSessionClosed error = errors.New("session closed")
@@ -23,11 +24,13 @@ type session struct {
 	in    *queue
 	out   *queue
 
-	mu           sync.Mutex
+	mu           sync.RWMutex
 	closed_      bool
 	interrupted_ bool
 	reserved     bool
+	timeouted_ bool
 	info         *RequestInfo
+	lastMsgTime_  time.Time
 }
 
 func (s *session) init(r *http.Request,
@@ -40,8 +43,18 @@ func (s *session) init(r *http.Request,
 	s.info = newRequestInfo(r, prefix, headers)
 }
 
-func (s *session) Receive() ([]byte, error) {
-	return s.in.pull()
+func (s *session) Receive() (m []byte, err error) {
+	m, err = s.in.pull()
+
+	switch {
+	case err == nil:
+		s.setLastMsgTime(time.Now())
+	case s.timeouted():
+		err = ErrSessionTimeout
+	default: // errQueueClosed
+		err = ErrSessionClosed
+	}
+	return
 }
 
 func (s *session) Send(m []byte) error {
@@ -49,24 +62,51 @@ func (s *session) Send(m []byte) error {
 	return nil
 }
 
-// Close marks the connection closed and closes the underlying message queues.
 func (s *session) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.closed_ = true
-	s.in.close()
-	s.out.close()
+	s.cleanup()
 	return nil
 }
 
 func (s *session) Info() RequestInfo {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return *s.info
 }
 
 func (s *session) Protocol() Protocol {
 	return s.proto.protocol()
+}
+
+func (s *session) timeouted() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.timeouted_
+}
+
+func (s *session) timeout() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.timeouted_ = true
+}
+
+func (s *session) lastMsgTime() time.Time{
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.lastMsgTime_
+}
+
+func (s *session) setLastMsgTime(lastMsgTime time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lastMsgTime_ = lastMsgTime
+}
+
+func (s *session) cleanup() {
+	s.in.close()
+	s.out.close()
 }
 
 func (s *session) setInfo(info *RequestInfo) {
@@ -96,15 +136,15 @@ func (s *session) free() {
 
 // Closed returns true, if the session is closed, otherwise false.
 func (s *session) closed() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.closed_
 }
 
 // Interrupted returns true, if the session was interrupted.
 func (s *session) interrupted() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.interrupted_
 }
 
@@ -119,7 +159,7 @@ func (s *session) interrupt() {
 // VerifyAddr returns true, if the given remote address matches the one used in the last request,
 // otherwise false.
 func (s *session) verifyAddr(addr string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return verifyAddr(s.info.RemoteAddr, addr)
 }

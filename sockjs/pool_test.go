@@ -11,7 +11,7 @@ type PoolSuite struct {
 var _ = Suite(&PoolSuite{})
 
 func (s *PoolSuite) SetUpTest(c *C) {
-	s.p = newPool()
+	s.p = newPool(NewConfig().DisconnectDelay)
 }
 
 func (s *PoolSuite) TearDownTest(c *C) {

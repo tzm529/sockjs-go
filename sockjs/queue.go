@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-var errQueueClosed error = errors.New("queue is closed")
+var errQueueClosed error = errors.New("queue closed")
 
 // Infinite message queue
 type queue struct {

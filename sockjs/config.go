@@ -37,7 +37,7 @@ type Config struct {
 	// Default: 25 seconds
 	HeartbeatDelay time.Duration
 
-	// Disconnection delay.
+	// Disconnect delay.
 	// Default: 5 seconds
 	DisconnectDelay time.Duration
 

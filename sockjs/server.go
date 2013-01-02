@@ -10,21 +10,23 @@ import (
 // for non-sockjs paths.
 type Server struct {
 	mu   sync.RWMutex
-	m    map[string]http.Handler
+	m    map[string]*Handler
 	alt  http.Handler
-	pool *pool
 }
 
 func NewServer(alt http.Handler) *Server {
 	m := new(Server)
-	m.m = make(map[string]http.Handler)
+	m.m = make(map[string]*Handler)
 	m.alt = alt
-	m.pool = newPool()
 	return m
 }
 
 func (m *Server) Close() {
-	m.pool.close()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _,v := range m.m {
+		v.close()
+	}
 }
 
 func (m *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +43,7 @@ func (m *Server) Handle(prefix string, hfunc func(Session), c Config) {
 	}
 
 	m.mu.Lock()
-	m.m[prefix] = newHandler(m.pool, prefix, hfunc, c)
+	m.m[prefix] = newHandler(prefix, hfunc, c)
 	m.mu.Unlock()
 }
 
@@ -54,9 +56,9 @@ func pathMatch(prefix, path string) bool {
 // Most-specific (longest) prefix wins.
 // If no handler is found, return the alternate handler or http.NotFoundHandler().
 func (m *Server) match(path string) (h http.Handler) {
-	var n = 0
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	var n = 0
 	for k, v := range m.m {
 		if !pathMatch(k, path) {
 			continue

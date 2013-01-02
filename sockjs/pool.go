@@ -1,18 +1,24 @@
 package sockjs
 
 import (
+	"time"
 	"sync"
 )
 
 //* pool for "Protocol"/non-websocket sessions
 type pool struct {
 	sync.RWMutex
+	disconnectDelay time.Duration
 	pool map[string]*session
+	closed bool
 }
 
-func newPool() *pool {
+func newPool(disconnectDelay time.Duration) *pool {
 	pool := new(pool)
+	pool.disconnectDelay = disconnectDelay
 	pool.pool = make(map[string]*session)
+
+	go pool.garbageCollector()
 	return pool
 }
 
@@ -43,4 +49,26 @@ func (p *pool) remove(sessid string) (s *session) {
 }
 
 func (p *pool) close() {
+	p.Lock()
+	defer p.Unlock()
+	p.closed = true
+}
+
+// Garbage collector cleans up timeouted connections.
+func (p *pool) garbageCollector() {
+	for {
+		time.Sleep(p.disconnectDelay)
+		p.Lock()
+		for k, v := range p.pool {
+			timeouted := time.Since(v.lastMsgTime()) > p.disconnectDelay
+		    if timeouted || v.closed() { 
+				if timeouted { v.timeout() }
+				v.cleanup()
+				delete(p.pool, k)
+			}
+		}
+		if p.closed { return }
+
+		p.Unlock()
+	}
 }

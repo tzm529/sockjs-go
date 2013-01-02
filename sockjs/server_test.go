@@ -9,14 +9,14 @@ type ServerSuite struct{}
 
 var _ = Suite(&ServerSuite{})
 
+// plain http.Handler is not comparable
 type nopHandler int
-
 func (n nopHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
 
 func (s *ServerSuite) TestServerMatch(c *C) {
 	alt := nopHandler(0)
-	long := nopHandler(1)
-	short := nopHandler(2)
+	long := newHandler("/prefix/long", nil, NewConfig())
+	short := newHandler("/prefix", nil, NewConfig())
 
 	server := NewServer(alt)
 	defer server.Close()
