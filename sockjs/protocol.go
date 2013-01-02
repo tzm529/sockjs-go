@@ -72,7 +72,7 @@ func protocolHandler(h *Handler,
 		rw.WriteHeader(http.StatusOK)
 
 		// use chunked format for http/1.1.
-		// http/ 1.0 does not support it.
+		// http/1.0 does not support it.
 		if r.ProtoMinor == 1 {
 			conn, bufrw, err := rw.(http.Hijacker).Hijack()
 			if err != nil {

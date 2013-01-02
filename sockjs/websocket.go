@@ -116,6 +116,7 @@ func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 func websocketPostHandler(w http.ResponseWriter, r *http.Request) {
+	// normal http methods don't seem to allow writing response without Content-Type
 	conn, bufrw, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -131,5 +132,4 @@ func websocketPostHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(bufrw, "Allow: GET\r\n")
 	fmt.Fprint(bufrw, "\r\n")
 	bufrw.Flush()
-	return
 }
