@@ -60,7 +60,7 @@ func (p *pool) garbageCollector() {
 		time.Sleep(p.disconnectDelay)
 		p.Lock()
 		for k, v := range p.pool {
-			timeouted := time.Since(v.lastMsgTime()) > p.disconnectDelay
+			timeouted := time.Since(v.lastRecvTime()) > p.disconnectDelay
 		    if timeouted || v.closed() { 
 				if timeouted { v.timeout() }
 				v.cleanup()
@@ -68,7 +68,6 @@ func (p *pool) garbageCollector() {
 			}
 		}
 		if p.closed { return }
-
 		p.Unlock()
 	}
 }

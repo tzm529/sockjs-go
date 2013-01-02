@@ -10,6 +10,7 @@ import (
 type protocol interface {
 	contentType() string
 	writeOpen(io.Writer) error
+	//writeHeartbeat(io.Writer) error
 	writeData(io.Writer, ...[]byte) (int, error)
 	writeClose(io.Writer, int, string)
 	protocol() Protocol
@@ -104,6 +105,7 @@ func protocolHandler(h *Handler,
 		}
 		s.init(r, h.prefix, p, h.config.Headers)
 		go h.hfunc(s)
+		//go heartbeater(p, w, h.config.heartbeatDelay)
 		if pw == nil {
 			return
 		}
@@ -127,6 +129,7 @@ func protocolHandler(h *Handler,
 		return
 	}
 	defer s.free()
+	defer s.updateLastRecvTime()
 
 	if pw == nil {
 		m, err := s.out.pullAll()

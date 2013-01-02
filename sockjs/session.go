@@ -30,7 +30,7 @@ type session struct {
 	reserved     bool
 	timeouted_ bool
 	info         *RequestInfo
-	lastMsgTime_  time.Time
+	lastRecvTime_  time.Time
 }
 
 func (s *session) init(r *http.Request,
@@ -46,13 +46,12 @@ func (s *session) init(r *http.Request,
 func (s *session) Receive() (m []byte, err error) {
 	m, err = s.in.pull()
 
-	switch {
-	case err == nil:
-		s.setLastMsgTime(time.Now())
-	case s.timeouted():
-		err = ErrSessionTimeout
-	default: // errQueueClosed
-		err = ErrSessionClosed
+	if err != nil {
+		if s.timeouted() {
+			err = ErrSessionTimeout
+		} else { // errQueueClosed
+			err = ErrSessionClosed
+		} 
 	}
 	return
 }
@@ -92,16 +91,16 @@ func (s *session) timeout() {
 	s.timeouted_ = true
 }
 
-func (s *session) lastMsgTime() time.Time{
+func (s *session) lastRecvTime() time.Time{
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.lastMsgTime_
+	return s.lastRecvTime_
 }
 
-func (s *session) setLastMsgTime(lastMsgTime time.Time) {
+func (s *session) updateLastRecvTime() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.lastMsgTime_ = lastMsgTime
+	s.lastRecvTime_ = time.Now()
 }
 
 func (s *session) cleanup() {
