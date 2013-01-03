@@ -9,10 +9,7 @@ import (
 
 type protocol interface {
 	contentType() string
-	writeOpen(io.Writer) error
-	//writeHeartbeat(io.Writer) error
-	writeData(io.Writer, ...[]byte) (int, error)
-	writeClose(io.Writer, int, string)
+	write(io.Writer, []byte) (int, error)
 	protocol() Protocol
 
 	// returns a preludeWriter or nil, if the protocol is not streaming.
@@ -99,7 +96,7 @@ func protocolHandler(h *Handler,
 	s, exists := h.pool.getOrCreate(sessid)
 	if !exists {
 		// initiate connection
-		if err = p.writeOpen(w); err != nil {
+		if _, err = p.write(w, []byte{'o'}); err != nil {
 			h.pool.remove(sessid)
 			return
 		}
@@ -112,20 +109,19 @@ func protocolHandler(h *Handler,
 	}
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.writeClose(w, 2500, "Remote address mismatch")
+		p.write(w, cframe(2500, "Remote address mismatch"))
 		return
 	}
 
 	if s.interrupted() {
-		p.writeClose(w, 1002, "Connection interrupted")
+		p.write(w, cframe(1002, "Connection interrupted"))
 		return
 	}
 
 	fail := s.reserve()
 	if fail {
 		s.interrupt()
-		//s.Close()
-		p.writeClose(w, 2010, "Another connection still open")
+		p.write(w, cframe(2010, "Another connection still open"))
 		return
 	}
 	defer s.free()
@@ -134,19 +130,19 @@ func protocolHandler(h *Handler,
 	if pw == nil {
 		m, err := s.out.pullAll()
 		if err != nil {
-			p.writeClose(w, 3000, "Go away!")
+			p.write(w, cframe(3000, "Go away!"))
 			return
 		}
-		p.writeData(w, m...)
+		p.write(w, aframe(m...))
 	} else {
 		for sent := 0; sent < h.config.ResponseLimit; {
 			m, err := s.out.pullAll()
 			if err != nil {
-				p.writeClose(w, 3000, "Go away!")
+				p.write(w, cframe(3000, "Go away!"))
 				return
 			}
 
-			n, err := p.writeData(w, m...)
+			n, err := p.write(w, aframe(m...))
 			if err != nil {
 				return
 			}

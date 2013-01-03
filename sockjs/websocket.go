@@ -61,12 +61,12 @@ func (s *websocketSession) Receive() (m []byte, err error) {
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
-	_, err = s.ws.Write(aframe("", "", m))
+	_, err = s.ws.Write(aframe(m))
 	return
 }
 
 func (s *websocketSession) Close() (err error) {
-	s.ws.Write(cframe("", 3000, "Go away!", ""))
+	s.ws.Write(cframe(3000, "Go away!"))
 	err = s.ws.Close()
 	return
 }

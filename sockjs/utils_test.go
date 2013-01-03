@@ -9,17 +9,17 @@ type UtilsSuite struct{}
 var _ = Suite(&UtilsSuite{})
 
 func (s *UtilsSuite) TestDataFrame(c *C) {
-	c.Assert(aframe("foo", "bar", [][]byte{
+	c.Assert(aframe([][]byte{
 		{'a', 'b', 'c'},
 		{'d', 'e', 'f'},
 		{'g', 'h', 'i'},
-	}...), DeepEquals, []byte(`fooa["abc","def","ghi"]bar`))
+	}...), DeepEquals, []byte(`a["abc","def","ghi"]`))
 }
 
 func (s *UtilsSuite) TestCloseFrame(c *C) {
-	c.Assert(cframe("foo", 3210, "multifail", "bar"),
+	c.Assert(cframe(3210, "multifail"),
 		DeepEquals,
-		[]byte(`fooc[3210,"multifail"]bar`))
+		[]byte(`c[3210,"multifail"]`))
 }
 
 func (s *UtilsSuite) TestVerifyAddr(c *C) {
@@ -31,7 +31,7 @@ func (s *UtilsSuite) TestVerifyAddr(c *C) {
 
 func (s *UtilsSuite) BenchmarkDataFrame(c *C) {
 	for i := 0; i < c.N; i++ {
-		aframe("foo", "bar", [][]byte{
+		aframe([][]byte{
 			{'a', 'b', 'c'},
 			{'d', 'e', 'f'},
 			{'g', 'h', 'i'},

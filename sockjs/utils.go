@@ -1,12 +1,14 @@
 package sockjs
 
 import (
+	"io"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+//	"time"
 )
 
 var dummyCookie = &http.Cookie{
@@ -24,7 +26,7 @@ func escaper(m []byte) []byte {
 	return []byte(fmt.Sprintf(`\u%04x`, r))
 }
 
-func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
+func aframe(m ...[]byte) (f []byte) {
 	strings := make([]string, len(m))
 	for i := range m {
 		strings[i] = string(m[i])
@@ -32,20 +34,18 @@ func aframe(prefix, suffix string, m ...[]byte) (f []byte) {
 	s, _ := json.Marshal(strings)
 	s = escapable.ReplaceAllFunc(s, escaper)
 
-	f = append(f, prefix...)
 	f = append(f, 'a')
 	f = append(f, s...)
-	f = append(f, suffix...)
 	return
 }
 
-func cframe(prefix string, code int, m string, suffix string) []byte {
-	return []byte(fmt.Sprintf(`%sc[%d,"%s"]%s`, prefix, code, m, suffix))
+func cframe(code int, m string) []byte {
+	return []byte(fmt.Sprintf(`c[%d,"%s"]`, code, m))
 }
 
 func writeHttpClose(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
-	w.Write(cframe("", 3000, "Go away!", "\n"))
+	io.WriteString(w, "c[3000,\"Go away!\"]\n")
 }
 
 // addresses match, if the ip is the same, disregard port.
@@ -63,3 +63,11 @@ func hfuncCloseWrapper(hfunc func(Session)) func(Session) {
 		s.Close()
 	}
 }
+/*
+func heartbeater(w io.Writer, delay time.Duration) {
+	for {
+		time.Sleep(delay)
+		err := p.WriteHeartbeat(w)
+		if err != nil { return }
+	}
+}*/

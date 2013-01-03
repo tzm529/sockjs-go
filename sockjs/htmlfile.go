@@ -29,6 +29,15 @@ type htmlfileProtocol struct {
 
 func (p *htmlfileProtocol) contentType() string { return "text/html; charset=UTF-8" }
 
+func (p *htmlfileProtocol) write(w io.Writer, m []byte) (n int, err error) {
+	js, _ := json.Marshal(string(m))
+	n, err = fmt.Fprintf(w, "<script>\np(%s);\n</script>\r\n", js)
+	return
+}
+
+func (p *htmlfileProtocol) protocol() Protocol       { return ProtocolHtmlfile }
+func (p *htmlfileProtocol) streaming() preludeWriter { return p }
+
 func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 	prelude := fmt.Sprintf(htmlFileFormat, p.callback)
 	if len(prelude) < 1024 {
@@ -38,24 +47,6 @@ func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 	_, err = io.WriteString(w, prelude)
 	return
 }
-
-func (p *htmlfileProtocol) writeOpen(w io.Writer) (err error) {
-	_, err = io.WriteString(w, "<script>\np(\"o\");\n</script>\r\n")
-	return
-}
-
-func (p *htmlfileProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
-	js, _ := json.Marshal(string(aframe("", "", m...)))
-	n, err = fmt.Fprintf(w, "<script>\np(%s);\n</script>\r\n", js)
-	return
-}
-
-func (p *htmlfileProtocol) writeClose(w io.Writer, code int, m string) {
-	w.Write(cframe("<script>\np(\"", code, m, "\");\n</script>\r\n"))
-}
-
-func (p *htmlfileProtocol) protocol() Protocol       { return ProtocolHtmlfile }
-func (p *htmlfileProtocol) streaming() preludeWriter { return p }
 
 func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {

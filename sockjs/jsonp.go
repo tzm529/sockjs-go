@@ -15,19 +15,10 @@ type jsonpProtocol struct {
 
 func (p *jsonpProtocol) contentType() string { return "application/javascript; charset=UTF-8" }
 
-func (p *jsonpProtocol) writeOpen(w io.Writer) (err error) {
-	_, err = fmt.Fprintf(w, "%s(\"o\");\r\n", p.callback)
-	return
-}
-
-func (p *jsonpProtocol) writeData(w io.Writer, m ...[]byte) (n int, err error) {
-	js, _ := json.Marshal(string(aframe("", "", m...)))
+func (p jsonpProtocol) write(w io.Writer, m []byte) (n int, err error) {
+	js, _ := json.Marshal(string(m))
 	n, err = fmt.Fprintf(w, "%s(%s);\r\n", p.callback, js)
 	return
-}
-
-func (p *jsonpProtocol) writeClose(w io.Writer, code int, m string) {
-	fmt.Fprintf(w, "%s(\"c[%d,\\\"%s\\\"]\");\r\n", p.callback, code, m)
 }
 
 func (p *jsonpProtocol) protocol() Protocol       { return ProtocolJsonp }

@@ -12,17 +12,9 @@ type xhrPollingProtocol struct{}
 
 func (p xhrPollingProtocol) contentType() string { return "application/javascript; charset=UTF-8" }
 
-func (p xhrPollingProtocol) writeOpen(w io.Writer) (err error) {
-	_, err = io.WriteString(w, "o\n")
+func (p xhrPollingProtocol) write(w io.Writer, m []byte) (n int, err error) {
+	n, err = w.Write(append(m, '\n'))
 	return
-}
-
-func (p xhrPollingProtocol) writeData(w io.Writer, m ...[]byte) (int, error) {
-	return w.Write(aframe("", "\n", m...))
-}
-
-func (p xhrPollingProtocol) writeClose(w io.Writer, code int, m string) {
-	w.Write(cframe("", code, m, "\n"))
 }
 
 func (p xhrPollingProtocol) protocol() Protocol       { return ProtocolXhrPolling }
