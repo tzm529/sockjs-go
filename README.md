@@ -1,6 +1,8 @@
 sockjs-go
 =========
 
+WORK IN PROGRESS
+
 sockjs is a package for Go that implements a sockjs server.
 
 ## Installation
