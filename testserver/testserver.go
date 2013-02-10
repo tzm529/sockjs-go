@@ -23,8 +23,6 @@ func echoHandler(s sockjs.Session) {
 
 func main() {
 	server := sockjs.NewServer(http.DefaultServeMux)
-	defer server.Close()
-
 	conf := sockjs.NewConfig()
 	conf.ResponseLimit = 4096
 	dwsconf := conf

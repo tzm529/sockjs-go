@@ -53,8 +53,7 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 
 	s := h.pool.get(sessid)
 	if s == nil {
-		http.NotFound(w, r)
-		return
+		goto closed
 	}
 
 	var data []byte
@@ -89,9 +88,16 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 		return
 	}
 
+	be, closed := <-s.inBuf
+	if closed { goto closed }
 	for _, v := range messages {
-		s.in.push([]byte(v))
+		be.buf.PushBack([]byte(v))
 	}
+	be.done <- struct{}{}
 
 	w.Write([]byte("ok"))
+	return
+
+closed:
+	http.NotFound(w, r)	
 }

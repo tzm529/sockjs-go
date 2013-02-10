@@ -40,9 +40,7 @@ type RequestInfo struct {
 	Prefix string
 }
 
-func newRequestInfo(r *http.Request,
-	prefix string,
-	headers []string) (info *RequestInfo) {
+func newRequestInfo(r *http.Request, prefix string, headers []string) (info *RequestInfo) {
 	info = new(RequestInfo)
 	info.URL = *r.URL
 	info.Host = r.Host

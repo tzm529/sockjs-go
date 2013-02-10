@@ -5,27 +5,50 @@ import (
 	"sync"
 )
 
-//* pool for "Protocol"/non-websocket sessions
-type pool struct {
-	sync.RWMutex
-	disconnectDelay time.Duration
-	pool map[string]*session
-	closed bool
+type poolElem struct {
+	sync.Mutex
+	*sync.Cond
+	s *session
+	onloan bool
 }
 
-func newPool(disconnectDelay time.Duration) *pool {
-	pool := new(pool)
-	pool.disconnectDelay = disconnectDelay
-	pool.pool = make(map[string]*session)
+//* pool for non-websocket sessions
+type pool struct {
+	sync.RWMutex
+	pool map[string]*poolElem
+}
 
-	go pool.garbageCollector()
-	return pool
+func newPool() (p *pool) {
+	p := new(p)
+	p.p = make(map[string]*poolElem)
+	return
+}
+
+func (p *pool) restore(sessid string) {
+	p.RLock()
+	pe, exists := p.pool[sessid]
+	p.RUnlock()
+
+	if !exists { return }
+	pe.Lock()
+	defer pe.Unlock()
+	pe.onloan = false
+	pe.Signal()
 }
 
 func (p *pool) get(sessid string) *session {
 	p.RLock()
-	defer p.RUnlock()
-	return p.pool[sessid]
+	pe := p.pool[sessid]
+	p.RUnlock()
+
+	pe.Lock()
+	defer pe.Unlock()
+	for !pe.onloan {
+		pe.Wait()
+	}
+
+	pe.onloan = true
+	return pe.s
 }
 
 func (p *pool) getOrCreate(sessid string) (s *session, exists bool) {
@@ -46,28 +69,4 @@ func (p *pool) remove(sessid string) (s *session) {
 	s = p.pool[sessid]
 	delete(p.pool, sessid)
 	return
-}
-
-func (p *pool) close() {
-	p.Lock()
-	defer p.Unlock()
-	p.closed = true
-}
-
-// Garbage collector cleans up timeouted connections.
-func (p *pool) garbageCollector() {
-	for {
-		time.Sleep(p.disconnectDelay)
-		p.Lock()
-		for k, v := range p.pool {
-			timeouted := time.Since(v.lastRecvTime()) > p.disconnectDelay
-		    if timeouted || v.closed() { 
-				if timeouted { v.timeout() }
-				v.cleanup()
-				delete(p.pool, k)
-			}
-		}
-		if p.closed { return }
-		p.Unlock()
-	}
 }

@@ -6,69 +6,112 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 )
 
 type websocketSession struct {
-	in   *queue
 	ws   *websocket.Conn
 	info *RequestInfo
+	heartbeatDelay time.Duration
+
+	rio sync.Mutex
+	rbuf [][]byte
+
+	wio sync.Mutex
+	closed bool
+	closeErr error
 }
 
-func (s *websocketSession) Receive() (m []byte, err error) {
-	m, err = s.in.pullNow()
-	if err != nil {
-		return nil, ErrSessionClosed
-	}
-	if m != nil {
-		return
-	}
+func (s *websocketSession) Receive() ([]byte, error) {
+	s.rio.Lock()
+	defer s.rio.Unlock()
 
-	//* read some messages to the queue and pull the first one
+	if len(s.rbuf) > 0 {
+		m := s.rbuf[0]
+		s.rbuf = s.rbuf[1:]
+		return m, nil
+	}
+	
+	// nil the buffer, so the underlying array of the old slice gets GC'd
+	s.rbuf = nil
+
+again:
+	// Empty buffer, read some messages to it and return the first one.
 	var messages []string
 	var data []byte
+	var m []byte
 
-	err = websocket.Message.Receive(s.ws, &data)
-	if err != nil {
-		return nil, err
-	}
+	err := websocket.Message.Receive(s.ws, &data)
+	if err != nil { goto disconnect }
 
 	// ignore, no frame
 	if len(data) == 0 {
-		return s.Receive()
+		goto again 
 	}
 
 	err = json.Unmarshal(data, &messages)
-	if err != nil {
-		s.ws.Close()
-		return nil, err
-	}
+	if err != nil {	goto disconnect }
 
 	// ignore, no messages
 	if len(messages) == 0 {
-		return s.Receive()
+		goto again
 	}
 
 	for _, v := range messages {
-		s.in.push([]byte(v))
+		s.rbuf = append(s.rbuf, []byte(v))
 	}
-
-	m, err = s.in.pull()
-	if err != nil {
-		return nil, ErrSessionClosed
-	}
-
+	m = s.rbuf[0]
+	s.rbuf = s.rbuf[1:]
 	return m, nil
+disconnect:
+	s.wio.Lock()
+	s.disconnect()
+	s.wio.Unlock()
+
+	return nil, ErrSessionClosed
 }
 
 func (s *websocketSession) Send(m []byte) (err error) {
+	s.wio.Lock()
+	defer s.wio.Unlock()
+
+	if s.closed { return ErrSessionClosed }
 	_, err = s.ws.Write(aframe(m))
 	return
 }
 
-func (s *websocketSession) Close() (err error) {
-	s.ws.Write(cframe(3000, "Go away!"))
-	err = s.ws.Close()
-	return
+func (s *websocketSession) Close() error {
+	s.wio.Lock()
+	defer s.wio.Unlock()
+
+	// it must be safe to call Close() multiple times
+	if s.closed { return s.closeErr }
+
+	_, s.closeErr = s.ws.Write(cframe(3000, "Go away!"))
+	s.ws.Close()
+	s.closed = true
+	return s.closeErr
+}
+
+func (s *websocketSession) disconnect() {
+	s.ws.Close()
+	s.closed = true
+	s.closeErr = ErrSessionClosed
+}
+
+func (s *websocketSession) heartbeater() {
+	for {
+		time.Sleep(s.heartbeatDelay)
+		s.wio.Lock()
+		if s.closed { return }
+		_, err := s.ws.Write([]byte{'h'})
+		if err != nil {
+			s.disconnect()
+			return
+		}			
+		s.wio.Unlock()
+	}
 }
 
 func (p *websocketSession) Info() RequestInfo  { return *p.info }
@@ -106,9 +149,10 @@ func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 		}
 
 		s := new(websocketSession)
-		s.in = newQueue()
 		s.ws = ws
 		s.info = newRequestInfo(r, h.prefix, h.config.Headers)
+		s.heartbeatDelay = h.config.HeartbeatDelay
+		go s.heartbeater()
 		h.hfunc(s)
 	})
 

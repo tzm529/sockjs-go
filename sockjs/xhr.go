@@ -50,8 +50,7 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 
 	s := h.pool.get(sessid)
 	if s == nil {
-		http.NotFound(w, r)
-		return
+		goto closed
 	}
 
 	var messages []string
@@ -67,11 +66,18 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 		return
 	}
 
+	be, closed := <-s.inBuf
+	if closed { goto closed }
 	for _, v := range messages {
-		s.in.push([]byte(v))
+		be.buf.PushBack([]byte(v))
 	}
+	be.done <- struct{}{}
 
 	w.WriteHeader(http.StatusNoContent)
+	return
+
+closed:
+	http.NotFound(w, r)
 }
 
 func xhrOptionsHandler(h *Handler, w http.ResponseWriter, r *http.Request) {

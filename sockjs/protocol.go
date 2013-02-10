@@ -59,6 +59,8 @@ func protocolHandler(h *Handler,
 	p protocol) {
 	var err error
 	var w io.Writer
+	var fail bool
+	var infoset bool
 	pw := p.streaming()
 
 	header := rw.Header()
@@ -98,11 +100,12 @@ func protocolHandler(h *Handler,
 		// initiate connection
 		if _, err = p.write(w, []byte{'o'}); err != nil {
 			h.pool.remove(sessid)
-			return
+			goto disconnect
 		}
-		s.init(r, h.prefix, p, h.config.Headers)
+		s.init(r, p, h.config)
+		s.setInfo(newRequestInfo(r, h.prefix, config.Headers))
+		infoset = true
 		go h.hfunc(s)
-		//go heartbeater(p, w, h.config.heartbeatDelay)
 		if pw == nil {
 			return
 		}
@@ -118,35 +121,56 @@ func protocolHandler(h *Handler,
 		return
 	}
 
-	fail := s.reserve()
+	fail = s.reserve()
 	if fail {
 		s.interrupt()
 		p.write(w, cframe(2010, "Another connection still open"))
 		return
 	}
 	defer s.free()
-	defer s.updateLastRecvTime()
+
+	if infoset { s.setInfo(newRequestInfo(r, h.prefix, config.Headers)) }
 
 	if pw == nil {
-		m, err := s.out.pullAll()
-		if err != nil {
-			p.write(w, cframe(3000, "Go away!"))
-			return
-		}
-		p.write(w, aframe(m...))
-	} else {
-		for sent := 0; sent < h.config.ResponseLimit; {
-			m, err := s.out.pullAll()
-			if err != nil {
-				p.write(w, cframe(3000, "Go away!"))
-				return
-			}
+		//* polling
 
-			n, err := p.write(w, aframe(m...))
-			if err != nil {
-				return
+		// heartbeat
+		select {
+		case <-s.hbTicker.C:
+			_, err = p.write(w, []byte{'h'})
+			if err != nil { goto disconnect }
+			return
+		default:
+		}
+
+		// data
+		we, closed := <-s.outOut
+		if closed { goto disconnect }
+		_, err = p.write(w, we.m)
+		we.rv <- err
+		if err != nil { goto disconnect }
+	} else {
+		//* streaming
+		var n int
+		for sent := 0; sent < h.config.ResponseLimit; {
+			select {
+			case <-s.hbTicker.C:
+				// heartbeat
+				n, err = p.write(w, []byte{'h'})
+				if err != nil { goto disconnect }
+			case we, closed := <-s.outOut:
+				// data
+				if closed { goto disconnect }
+				n, err = p.write(w, we.m)
+				we.rv <- err
+				if err != nil {	goto disconnect	}
 			}
 			sent += n
 		}
 	}
+	return
+
+disconnect:
+	p.write(w, cframe(3000, "Go away!"))
+	s.Close()
 }

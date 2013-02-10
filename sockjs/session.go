@@ -5,10 +5,26 @@ import (
 	"net/http"
 	"sync"
 	"time"
+//	"container/list"
 )
 
 var ErrSessionClosed error = errors.New("session closed")
 var ErrSessionTimeout error = errors.New("session timeout")
+
+type readEnvelope struct {
+	m []byte
+	err error
+}
+
+type writeEnvelope struct {
+	m []byte
+	rv chan error
+}
+
+type bufEnvelope struct {
+	buf *list.List
+	done chan struct{}
+}
 
 type Session interface {
 	Receive() ([]byte, error)
@@ -20,53 +36,92 @@ type Session interface {
 
 // structure for polling sessions
 type session struct {
-	proto protocol // read-only
-	in    *queue
-	out   *queue
+	// read-only
+	proto protocol
 
-	mu           sync.RWMutex
-	closed_      bool
+	in chan []byte
+	rio sync.Mutex
+	rbuf *list
+
+
+	closer chan struct{}
+	inBuf chan chan *bufEnvelope
+	inOut chan []byte
+	out chan *writeEnvelope
+	wc chan io.WriteCloser
+	hbTicker *time.Ticker
+	dcTicker *time.Ticker
+
+	mu sync.RWMutex
 	interrupted_ bool
 	reserved     bool
-	timeouted_ bool
 	info         *RequestInfo
-	lastRecvTime_  time.Time
 }
 
-func (s *session) init(r *http.Request,
-	prefix string,
-	proto protocol,
-	headers []string) {
+func (s *session) init(r *http.Request, proto protocol, config *config) {
 	s.proto = proto
-	s.in = newQueue()
-	s.out = newQueue()
-	s.info = newRequestInfo(r, prefix, headers)
+	s.hbTicker = time.NewTicker(config.HeartbeatDelay)
+	s.dcTicker = time.NewTicker(config.DisconnectionDelay)
+	go backend()
 }
 
-func (s *session) Receive() (m []byte, err error) {
-	m, err = s.in.pull()
+func (s *session) backend() {
+	rbuf := list.New()
+	wbuf := list.New()
+	defer close(s.closer)
+	defer close(s.inBuf)
+	defer close(s.inOut)
+	defer s.hbTicker.Stop()
+	defer s.dcTicker.Stop()
 
-	if err != nil {
-		if s.timeouted() {
-			err = ErrSessionTimeout
-		} else { // errQueueClosed
-			err = ErrSessionClosed
-		} 
+	for {
+		if rbuf.Len() > 0 {
+			// try sending a messages to Read()
+			front := rbuf.Front()
+			select {
+			default:
+			case s.inOut <- front.Value.([]byte):
+				rbuf.Remove(front)
+			}
+		}
+
+
+		rbufDone := make(chan struct{})
+		select {
+		case <-s.closer:
+			return
+
+			// loan rbuf to a reader
+		case s.inBuf <- &bufEnvelope{rbuf, rbufDone):
+			<-rbufDone
+
+		case <-s.dcTicker:
+			// TODO
+		}
 	}
-	return
 }
 
-func (s *session) Send(m []byte) error {
-	s.out.push(m)
-	return nil
+func (s *session) Receive() ([]byte, error) {
+	m, closed := <-s.inOut
+	if closed { return nil, ErrSessionClosed }
+	return m, nil
+}
+
+func (s *session) Send(m []byte) (err error) {
+	rv := make(chan error)
+	select {
+	case <-s.closer:
+		return ErrSessionClosed
+	case s.out <- &connWrite(m, rv):
+	}
+	return <-rv
 }
 
 func (s *session) Close() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.closed_ = true
-	s.cleanup()
-	return nil
+	select{
+	default:
+	case <-s.closer:
+	}
 }
 
 func (s *session) Info() RequestInfo {
@@ -77,35 +132,6 @@ func (s *session) Info() RequestInfo {
 
 func (s *session) Protocol() Protocol {
 	return s.proto.protocol()
-}
-
-func (s *session) timeouted() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.timeouted_
-}
-
-func (s *session) timeout() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.timeouted_ = true
-}
-
-func (s *session) lastRecvTime() time.Time{
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.lastRecvTime_
-}
-
-func (s *session) updateLastRecvTime() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.lastRecvTime_ = time.Now()
-}
-
-func (s *session) cleanup() {
-	s.in.close()
-	s.out.close()
 }
 
 func (s *session) setInfo(info *RequestInfo) {
@@ -133,13 +159,6 @@ func (s *session) free() {
 	s.reserved = false
 }
 
-// Closed returns true, if the session is closed, otherwise false.
-func (s *session) closed() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.closed_
-}
-
 // Interrupted returns true, if the session was interrupted.
 func (s *session) interrupted() bool {
 	s.mu.RLock()
@@ -147,11 +166,10 @@ func (s *session) interrupted() bool {
 	return s.interrupted_
 }
 
-// Interrupt marks the session closed and interrupted.
+// Interrupt marks the session interrupted.
 func (s *session) interrupt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.closed_ = true
 	s.interrupted_ = true
 }
 

@@ -32,7 +32,6 @@ If you make contributions to the project, please follow the guidelines below:
 *  Avoid commenting trivial or otherwise obvious code.
 *  Avoid writing fancy ascii-artsy comments. 
 *  Write terse code without too much newlines or other non-essential whitespace.
-*  Separate code sections with "//* My section"-styled comments.
 
 
 ## Copyright and licensing
