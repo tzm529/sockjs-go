@@ -23,7 +23,7 @@ const (
 </html>`
 )
 
-func iframeHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func iframeHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("If-None-Match") == h.config.iframeHash {
 		w.WriteHeader(http.StatusNotModified)
 		return

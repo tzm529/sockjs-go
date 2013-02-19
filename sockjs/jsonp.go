@@ -24,7 +24,7 @@ func (p jsonpProtocol) write(w io.Writer, m []byte) (n int, err error) {
 func (p *jsonpProtocol) protocol() Protocol       { return ProtocolJsonp }
 func (p *jsonpProtocol) streaming() preludeWriter { return nil }
 
-func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+func jsonpHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "", http.StatusInternalServerError)
 		return
@@ -45,7 +45,7 @@ func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid str
 	legacyHandler(h, w, r, sessid, p)
 }
 
-func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+func jsonpSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	var data []byte
 	var buf *bytes.Buffer
 	var messages []string
@@ -91,9 +91,7 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 	}
 
 	for _, v := range messages {
-		token, ok := <- s.receiveToken
-		if !ok { goto closed }
-		token <- []byte(v)
+		s.rbufAppend([]byte(v))
 	}
 
 	w.Write([]byte("ok"))

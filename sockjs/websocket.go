@@ -140,7 +140,7 @@ func (s *websocketSession) abruptClose() {
 	s.closer <- closure
 }
 
-func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return

@@ -34,7 +34,7 @@ func (s *rawWebsocketSession) Close(code int, reason string) {
 func (s *rawWebsocketSession) Info() RequestInfo  { return *s.info }
 func (s *rawWebsocketSession) Protocol() Protocol { return ProtocolRawWebsocket }
 
-func rawWebsocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func rawWebsocketHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return

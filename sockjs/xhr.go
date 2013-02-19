@@ -41,7 +41,7 @@ func (p xhrStreamingProtocol) writePrelude(w io.Writer) (err error) {
 func (p xhrStreamingProtocol) protocol() Protocol       { return ProtocolXhrStreaming }
 func (p xhrStreamingProtocol) streaming() preludeWriter { return p }
 
-func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+func xhrSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	var messages []string
 	var decoder *json.Decoder
 
@@ -69,9 +69,7 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 	}
 
 	for _, v := range messages {
-		token, ok := <-s.receiveToken
-		if !ok { goto closed }
-		token <- []byte(v)
+		s.rbufAppend([]byte(v))
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -81,7 +79,7 @@ closed:
 	http.NotFound(w, r)
 }
 
-func xhrOptionsHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func xhrOptionsHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
 	header.Add("Access-Control-Allow-Methods", "OPTIONS, POST")
 	sid(h, w, r)

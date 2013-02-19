@@ -36,7 +36,7 @@ func xhrCors(h http.Header, r *http.Request) {
 // a JSESSIONID cookie. If this cookie isn't yet set, we shall
 // set it to a dummy value. It doesn't really matter what, as
 // session information is usually added by the load balancer.
-func sid(h *Handler, w http.ResponseWriter, r *http.Request) {
+func sid(h *handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Jsessionid {
 		return
 	}

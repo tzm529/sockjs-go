@@ -16,7 +16,7 @@ type Session interface {
 	// Panics, if the session is closed.
 	Send(m []byte)
 
-	// Close closes the session and discards the session receive buffer.
+	// Close closes the session.
 	// Pending sends will be discarded unless the client receives them within 
 	// Config.DisconnectDelay.
 	Close(code int, reason string)
@@ -40,13 +40,14 @@ type legacySession struct {
 	config *Config
 
 	closer chan struct{}
-	receiveToken chan chan []byte
-	receiveBuffer chan []byte
-	receiveOut chan []byte
 	sendBuffer chan []byte
 	sendFrame chan []byte
 	hbTicker *time.Ticker
 	dcTicker *time.Ticker
+
+	rio sync.Mutex
+	rbufEmpty *sync.Cond
+	rbuf *list.List
 
 	mu sync.RWMutex
 	closed_ bool
@@ -59,7 +60,15 @@ type legacySession struct {
 }
 
 func (s *legacySession) Receive() []byte {
-	return <-s.receiveOut
+	s.rio.Lock()
+	defer s.rio.Unlock()
+
+	for s.rbuf.Len() == 0 {
+		if s.closed() { return nil }
+		s.rbufEmpty.Wait()
+	}
+
+	return s.rbuf.Remove(s.rbuf.Front()).([]byte)
 }
 
 func (s *legacySession) Send(m []byte) {
@@ -96,9 +105,8 @@ func (s *legacySession) init(r *http.Request, proto protocol, config *Config) {
 	s.config = config
 	s.proto = proto
 	s.closer = make(chan struct{})
-	s.receiveToken = make(chan chan []byte)
-	s.receiveBuffer = make(chan []byte)
-	s.receiveOut = make(chan []byte)
+	s.rbufEmpty = sync.NewCond(&s.rio)
+	s.rbuf = list.New()
 	s.sendBuffer = make(chan []byte)
 	s.sendFrame = make(chan []byte)
 	s.hbTicker = time.NewTicker(config.HeartbeatDelay)
@@ -107,20 +115,13 @@ func (s *legacySession) init(r *http.Request, proto protocol, config *Config) {
 }
 
 func (s *legacySession) backend() {
-	receiveToken := make(chan []byte)
-	defer close(s.receiveToken)
-	defer close(s.receiveBuffer)
 	defer close(s.sendBuffer)
 	defer s.hbTicker.Stop()
 	defer s.dcTicker.Stop()
-	go receiveBuffer(s.receiveBuffer, s.receiveOut)
 	go s.sendBuffer_(s.sendBuffer, s.sendFrame)
 
 	for {
 		select {
-		case s.receiveToken <- receiveToken:
-			s.receiveBuffer <- <-receiveToken
-
 		case <-s.hbTicker.C:
 			s.sendFrame <- []byte{'h'}
 
@@ -141,31 +142,12 @@ func (s *legacySession) backend() {
 	}
 }
 
-func receiveBuffer(in <-chan []byte, out chan<- []byte) {
-	pending := list.New()
-	defer close(out)
-	
-loop:
-	for {
-		// keep pending non-empty
-		if pending.Len() == 0 {
-			v, ok := <-in
-			if !ok {
-				break
-			}
-			pending.PushBack(v)
-		}
-		
-		select {
-		case v, ok := <-in:
-			if !ok {
-				break loop
-			}
-			pending.PushBack(v)
+func (s *legacySession) rbufAppend(m []byte) {
+	s.rio.Lock()
+	defer s.rio.Unlock()
 
-		case out <- pending.Remove(pending.Front()).([]byte):
-		}
-	}
+	s.rbuf.PushBack(m)
+	s.rbufEmpty.Signal()
 }
 
 func (s *legacySession) sendBuffer_(in <-chan []byte, out chan<- []byte) {

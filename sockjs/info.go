@@ -22,7 +22,7 @@ func newInfoData(ws bool) infoData {
 	}
 }
 
-func infoHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func infoHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
 	header.Add("Content-Type", "application/json; charset=UTF-8")
 	xhrCors(header, r)
@@ -32,7 +32,7 @@ func infoHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
-func infoOptionsHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
+func infoOptionsHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
 	header.Add("Access-Control-Allow-Methods", "OPTIONS, GET")
 	sid(h, w, r)

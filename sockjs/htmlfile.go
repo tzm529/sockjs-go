@@ -48,7 +48,7 @@ func (p *htmlfileProtocol) writePrelude(w io.Writer) (err error) {
 	return
 }
 
-func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+func htmlfileHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

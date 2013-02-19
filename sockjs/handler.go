@@ -12,15 +12,15 @@ var reSessionUrl = regexp.MustCompile(
 	`^/(?:[\w- ]+)/([\w- ]+)/(xhr|xhr_send|xhr_streaming|eventsource|htmlfile|websocket|jsonp|jsonp_send)$`)
 var reRawWebsocket = regexp.MustCompile(`^/websocket$`)
 
-type Handler struct {
+type handler struct {
 	prefix string
 	hfunc  func(Session)
 	config *Config
 	pool   *pool
 }
 
-func newHandler(pool *pool, prefix string, hfunc func(Session), c *Config) (h *Handler) {
-	h = new(Handler)
+func newHandler(pool *pool, prefix string, hfunc func(Session), c *Config) (h *handler) {
+	h = new(handler)
 	h.prefix = prefix
 	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
@@ -28,7 +28,7 @@ func newHandler(pool *pool, prefix string, hfunc func(Session), c *Config) (h *H
 	return h
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len(h.prefix):]
 	method := r.Method
 	header := w.Header()

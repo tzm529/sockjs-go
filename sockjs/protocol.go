@@ -52,7 +52,7 @@ func (sw *streamWriter) Close() error {
 	return sw.bufrw.Flush()
 }
 
-func legacyHandler(h *Handler,
+func legacyHandler(h *handler,
 	rw http.ResponseWriter,
 	r *http.Request,
 	sessid string,

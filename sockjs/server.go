@@ -6,18 +6,18 @@ import (
 )
 
 // Server is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
-// but just for sockjs.Handlers. It can optionally wrap an alternate http.Handler which is called 
+// but just for sockjs handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-sockjs paths.
 type Server struct {
 	mu   sync.RWMutex
-	m    map[string]*Handler
+	m    map[string]*handler
 	alt  http.Handler
 	pool *pool
 }
 
 func NewServer(alt http.Handler) *Server {
 	m := new(Server)
-	m.m = make(map[string]*Handler)
+	m.m = make(map[string]*handler)
 	m.alt = alt
 	m.pool = newPool()
 	return m
