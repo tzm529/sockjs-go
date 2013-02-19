@@ -42,10 +42,14 @@ func jsonpHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid str
 
 	p := new(jsonpProtocol)
 	p.callback = callback
-	protocolHandler(h, w, r, sessid, p)
+	legacyHandler(h, w, r, sessid, p)
 }
 
 func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+	var data []byte
+	var buf *bytes.Buffer
+	var messages []string
+
 	header := w.Header()
 	header.Add("Content-Type", "text/plain; charset=UTF-8")
 	sid(h, w, r)
@@ -56,8 +60,7 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 		goto closed
 	}
 
-	var data []byte
-	buf := bytes.NewBuffer(nil)
+	buf = bytes.NewBuffer(nil)
 	io.Copy(buf, r.Body)
 	r.Body.Close()
 	switch r.Header.Get("Content-Type") {
@@ -81,19 +84,17 @@ func jsonpSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid
 		return
 	}
 
-	var messages []string
 	if err := json.Unmarshal(data, &messages); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Broken JSON encoding."))
 		return
 	}
 
-	be, closed := <-s.inBuf
-	if closed { goto closed }
 	for _, v := range messages {
-		be.buf.PushBack([]byte(v))
+		token, ok := <- s.receiveToken
+		if !ok { goto closed }
+		token <- []byte(v)
 	}
-	be.done <- struct{}{}
 
 	w.Write([]byte("ok"))
 	return

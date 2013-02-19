@@ -52,7 +52,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "websocket":
 			websocketHandler(h, w, r)
 		case "eventsource":
-			protocolHandler(h, w, r, sessid, eventSourceProtocol{})
+			legacyHandler(h, w, r, sessid, eventSourceProtocol{})
 		case "htmlfile":
 			htmlfileHandler(h, w, r, sessid)
 		case "jsonp":
@@ -67,10 +67,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			websocketPostHandler(w, r)
 		case "xhr":
 			xhrCors(header, r)
-			protocolHandler(h, w, r, sessid, xhrPollingProtocol{})
+			legacyHandler(h, w, r, sessid, xhrPollingProtocol{})
 		case "xhr_streaming":
 			xhrCors(header, r)
-			protocolHandler(h, w, r, sessid, xhrStreamingProtocol{})
+			legacyHandler(h, w, r, sessid, xhrStreamingProtocol{})
 		case "xhr_send":
 			xhrCors(header, r)
 			xhrSendHandler(h, w, r, sessid)

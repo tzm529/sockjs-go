@@ -1,6 +1,8 @@
 package sockjs
 
 import (
+	"os"
+	"log"
 	"crypto/md5"
 	"fmt"
 	"net/http"
@@ -46,6 +48,10 @@ type Config struct {
 	//                   "x-cluster-client-ip", "via", "x-real-ip", "host"}
 	Headers []string
 
+	// Logger used for logging various information such as errors.
+	// Default: log.New(os.Stdout, "sockjs", 0)
+	Logger *log.Logger
+
 	iframePage []byte
 	iframeHash string
 }
@@ -59,7 +65,7 @@ func NewConfig() (c Config) {
 	c.DisconnectDelay = time.Duration(5) * time.Second
 	c.Headers = []string{"referer", "x-client-ip", "x-forwarded-for",
 		"x-cluster-client-ip", "via", "x-real-ip", "host"}
-
+	c.Logger = log.New(os.Stdout, "sockjs", 0)
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()
 	hash.Write(c.iframePage)

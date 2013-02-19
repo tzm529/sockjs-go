@@ -42,6 +42,9 @@ func (p xhrStreamingProtocol) protocol() Protocol       { return ProtocolXhrStre
 func (p xhrStreamingProtocol) streaming() preludeWriter { return p }
 
 func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid string) {
+	var messages []string
+	var decoder *json.Decoder
+
 	header := w.Header()
 	header.Add("Content-Type", "text/plain; charset=UTF-8")
 	sid(h, w, r)
@@ -53,8 +56,7 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 		goto closed
 	}
 
-	var messages []string
-	decoder := json.NewDecoder(r.Body)
+	decoder = json.NewDecoder(r.Body)
 	if err := decoder.Decode(&messages); err != nil {
 		if err == io.EOF {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -66,12 +68,11 @@ func xhrSendHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid s
 		return
 	}
 
-	be, closed := <-s.inBuf
-	if closed { goto closed }
 	for _, v := range messages {
-		be.buf.PushBack([]byte(v))
+		token, ok := <-s.receiveToken
+		if !ok { goto closed }
+		token <- []byte(v)
 	}
-	be.done <- struct{}{}
 
 	w.WriteHeader(http.StatusNoContent)
 	return

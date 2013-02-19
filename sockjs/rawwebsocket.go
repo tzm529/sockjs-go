@@ -10,26 +10,28 @@ type rawWebsocketSession struct {
 	info *RequestInfo
 }
 
-func (p *rawWebsocketSession) Receive() (data []byte, err error) {
-	err = websocket.Message.Receive(p.ws, &data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+func (s *rawWebsocketSession) Receive() (data []byte) {
+	err := websocket.Message.Receive(s.ws, &data)
+	if err != nil { return nil }
+	return data
 }
 
-func (p *rawWebsocketSession) Send(m []byte) (err error) {
-	_, err = p.ws.Write(m)
-	return
+func (s *rawWebsocketSession) Send(m []byte) {
+	s.ws.Write(m)
 }
 
-func (p *rawWebsocketSession) Close() error {
-	// BUG: Should specify close reason "Go away!".
-	//      websocket package does not allow doing this.
-	return p.ws.Close()
+func (s *rawWebsocketSession) End() {
+	s.Close(3000, "Go away!")
 }
 
-func (p *rawWebsocketSession) Info() RequestInfo  { return *p.info }
+func (s *rawWebsocketSession) Close(code int, reason string) {
+	// BUG: Websocket.Close() Should specify code and reason.
+	//      Websocket package does not allow doing this.
+	//      http://code.google.com/p/go/issues/detail?id=4588
+	s.ws.Close()
+}
+
+func (s *rawWebsocketSession) Info() RequestInfo  { return *s.info }
 func (s *rawWebsocketSession) Protocol() Protocol { return ProtocolRawWebsocket }
 
 func rawWebsocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {

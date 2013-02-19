@@ -52,14 +52,14 @@ func (sw *streamWriter) Close() error {
 	return sw.bufrw.Flush()
 }
 
-func protocolHandler(h *Handler,
+func legacyHandler(h *Handler,
 	rw http.ResponseWriter,
 	r *http.Request,
 	sessid string,
 	p protocol) {
 	var err error
 	var w io.Writer
-	var fail bool
+	var ok bool
 	var infoset bool
 	pw := p.streaming()
 
@@ -103,7 +103,7 @@ func protocolHandler(h *Handler,
 			goto disconnect
 		}
 		s.init(r, p, h.config)
-		s.setInfo(newRequestInfo(r, h.prefix, config.Headers))
+		s.setInfo(newRequestInfo(r, h.prefix, h.config.Headers))
 		infoset = true
 		go h.hfunc(s)
 		if pw == nil {
@@ -112,65 +112,52 @@ func protocolHandler(h *Handler,
 	}
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
-		p.write(w, cframe(2500, "Remote address mismatch"))
+		// not sure what a proper code should be here
+		p.write(w, cframe(3001, "Remote address mismatch"))
 		return
 	}
 
-	if s.interrupted() {
-		p.write(w, cframe(1002, "Connection interrupted"))
+	if s.closed() {
+		p.write(w, s.closeFrame())
 		return
 	}
 
-	fail = s.reserve()
-	if fail {
-		s.interrupt()
+	ok = s.reserve()
+	if !ok {
+		// one time close message
 		p.write(w, cframe(2010, "Another connection still open"))
+
+		s.interrupt()
+		s.Close(1002, "Connection interrupted")
 		return
 	}
 	defer s.free()
 
-	if infoset { s.setInfo(newRequestInfo(r, h.prefix, config.Headers)) }
+	if !infoset { 
+		s.setInfo(newRequestInfo(r, h.prefix, h.config.Headers))
+	}
 
 	if pw == nil {
 		//* polling
-
-		// heartbeat
-		select {
-		case <-s.hbTicker.C:
-			_, err = p.write(w, []byte{'h'})
-			if err != nil { goto disconnect }
-			return
-		default:
-		}
-
-		// data
-		we, closed := <-s.outOut
-		if closed { goto disconnect }
-		_, err = p.write(w, we.m)
-		we.rv <- err
+		m, ok := <-s.sendFrame
+		if !ok { goto disconnect }
+		_, err = p.write(w, m)
 		if err != nil { goto disconnect }
 	} else {
 		//* streaming
 		var n int
 		for sent := 0; sent < h.config.ResponseLimit; {
-			select {
-			case <-s.hbTicker.C:
-				// heartbeat
-				n, err = p.write(w, []byte{'h'})
-				if err != nil { goto disconnect }
-			case we, closed := <-s.outOut:
-				// data
-				if closed { goto disconnect }
-				n, err = p.write(w, we.m)
-				we.rv <- err
-				if err != nil {	goto disconnect	}
-			}
+			m, ok := <-s.sendFrame
+			if !ok { goto disconnect }
+			n, err = p.write(w, m)
+			if err != nil { goto disconnect }
 			sent += n
 		}
 	}
 	return
 
 disconnect:
-	p.write(w, cframe(3000, "Go away!"))
-	s.Close()
+	// close the session in case it hasn't been closed already
+	s.End()
+	p.write(w, s.closeFrame())
 }

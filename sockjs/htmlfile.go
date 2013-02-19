@@ -66,5 +66,5 @@ func htmlfileHandler(h *Handler, w http.ResponseWriter, r *http.Request, sessid 
 
 	p := new(htmlfileProtocol)
 	p.callback = callback
-	protocolHandler(h, w, r, sessid, p)
+	legacyHandler(h, w, r, sessid, p)
 }

@@ -6,41 +6,46 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
+	"sync"
 )
 
-type websocketSession struct {
-	ws   *websocket.Conn
-	info *RequestInfo
-	heartbeatDelay time.Duration
+type websocketClosure struct {
+	abrupt bool
+	code int
+	reason string
+}
 
+type websocketSession struct {
+	info *RequestInfo
+	ws *websocket.Conn
+
+	closer chan *websocketClosure
+	hbTicker *time.Ticker
+	dcTicker *time.Ticker
+
+	// lock for making Receive() thread-safe
 	rio sync.Mutex
 	rbuf [][]byte
 
-	wio sync.Mutex
+	mu sync.RWMutex
 	closed bool
-	closeErr error
 }
 
-func (s *websocketSession) Receive() ([]byte, error) {
+func (s *websocketSession) Receive() []byte {
 	s.rio.Lock()
 	defer s.rio.Unlock()
+	var m []byte
 
 	if len(s.rbuf) > 0 {
-		m := s.rbuf[0]
-		s.rbuf = s.rbuf[1:]
-		return m, nil
+		m, s.rbuf = s.rbuf[0], s.rbuf[1:]
+		return m
 	}
-	
-	// nil the buffer, so the underlying array of the old slice gets GC'd
-	s.rbuf = nil
 
 again:
 	// Empty buffer, read some messages to it and return the first one.
-	var messages []string
 	var data []byte
-	var m []byte
+	var messages []string
 
 	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil { goto disconnect }
@@ -51,7 +56,7 @@ again:
 	}
 
 	err = json.Unmarshal(data, &messages)
-	if err != nil {	goto disconnect }
+	if err != nil {	goto disconnect	}
 
 	// ignore, no messages
 	if len(messages) == 0 {
@@ -61,61 +66,79 @@ again:
 	for _, v := range messages {
 		s.rbuf = append(s.rbuf, []byte(v))
 	}
-	m = s.rbuf[0]
-	s.rbuf = s.rbuf[1:]
-	return m, nil
+
+	m, s.rbuf = s.rbuf[0], s.rbuf[1:]
+	return m
+
 disconnect:
-	s.wio.Lock()
-	s.disconnect()
-	s.wio.Unlock()
-
-	return nil, ErrSessionClosed
+	s.abruptClose()
+	return nil
 }
 
-func (s *websocketSession) Send(m []byte) (err error) {
-	s.wio.Lock()
-	defer s.wio.Unlock()
-
-	if s.closed { return ErrSessionClosed }
-	_, err = s.ws.Write(aframe(m))
-	return
+func (s *websocketSession) Send(m []byte) {
+	s.ws.Write(aframe(m))
 }
 
-func (s *websocketSession) Close() error {
-	s.wio.Lock()
-	defer s.wio.Unlock()
+func (s *websocketSession) End() {
+	s.Close(3000, "Go away!")
+}
 
-	// it must be safe to call Close() multiple times
-	if s.closed { return s.closeErr }
+func (s *websocketSession) Close(code int, reason string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	_, s.closeErr = s.ws.Write(cframe(3000, "Go away!"))
-	s.ws.Close()
+	if s.closed { return }
 	s.closed = true
-	return s.closeErr
+
+	closure := new(websocketClosure)
+	closure.abrupt = false
+	closure.code = code
+	closure.reason = reason
+
+	s.closer <- closure
 }
 
-func (s *websocketSession) disconnect() {
-	s.ws.Close()
-	s.closed = true
-	s.closeErr = ErrSessionClosed
-}
+func (s *websocketSession) Info() RequestInfo  { return *s.info }
+func (s *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
 
-func (s *websocketSession) heartbeater() {
+func (s *websocketSession) backend() {
+	defer s.hbTicker.Stop()
+	defer s.dcTicker.Stop()
+	defer s.ws.Close()
+
 	for {
-		time.Sleep(s.heartbeatDelay)
-		s.wio.Lock()
-		if s.closed { return }
-		_, err := s.ws.Write([]byte{'h'})
-		if err != nil {
-			s.disconnect()
+		select {
+		case <-s.hbTicker.C:
+			_, err := s.ws.Write([]byte{'h'})
+			if err != nil { 
+				s.mu.Lock()
+				s.closed = true
+				s.mu.Unlock()
+				return
+			}
+
+		case c := <-s.closer:
+			if !c.abrupt {
+				s.ws.Write(cframe(c.code, c.reason))
+			}
 			return
-		}			
-		s.wio.Unlock()
+		}
 	}
+
 }
 
-func (p *websocketSession) Info() RequestInfo  { return *p.info }
-func (p *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
+func (s *websocketSession) abruptClose() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed { return }
+	s.closed = true
+
+	closure := new(websocketClosure)
+	closure.abrupt = true
+
+	s.closer <- closure
+}
 
 func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
@@ -151,8 +174,10 @@ func websocketHandler(h *Handler, w http.ResponseWriter, r *http.Request) {
 		s := new(websocketSession)
 		s.ws = ws
 		s.info = newRequestInfo(r, h.prefix, h.config.Headers)
-		s.heartbeatDelay = h.config.HeartbeatDelay
-		go s.heartbeater()
+		s.closer = make(chan *websocketClosure)
+		s.hbTicker = time.NewTicker(h.config.HeartbeatDelay)
+		s.dcTicker = time.NewTicker(h.config.DisconnectDelay)
+		go s.backend()
 		h.hfunc(s)
 	})
 

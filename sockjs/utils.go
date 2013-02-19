@@ -60,7 +60,7 @@ func verifyAddr(a, b string) bool {
 func hfuncCloseWrapper(hfunc func(Session)) func(Session) {
 	return func(s Session) {
 		hfunc(s)
-		s.Close()
+		s.End()
 	}
 }
 /*

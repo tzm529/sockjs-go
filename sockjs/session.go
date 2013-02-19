@@ -1,173 +1,249 @@
 package sockjs
 
 import (
-	"errors"
 	"net/http"
 	"sync"
 	"time"
-//	"container/list"
+	"container/list"
 )
 
-var ErrSessionClosed error = errors.New("session closed")
-var ErrSessionTimeout error = errors.New("session timeout")
-
-type readEnvelope struct {
-	m []byte
-	err error
-}
-
-type writeEnvelope struct {
-	m []byte
-	rv chan error
-}
-
-type bufEnvelope struct {
-	buf *list.List
-	done chan struct{}
-}
-
 type Session interface {
-	Receive() ([]byte, error)
-	Send([]byte) error
-	Close() error
+	// Receive blocks until a message can be returned from session receive buffer or nil, 
+	// if the session is closed.
+	Receive() (m []byte)
+
+	// Send appends the given message to session send buffer.
+	// Panics, if the session is closed.
+	Send(m []byte)
+
+	// Close closes the session and discards the session receive buffer.
+	// Pending sends will be discarded unless the client receives them within 
+	// Config.DisconnectDelay.
+	Close(code int, reason string)
+
+	// End is a convenience method for closing with the default code and reason, 
+	// `Close(3000, "Go away!")`.
+	End()
+
+	// Info returns a RequestInfo object containing information copied from the last received 
+	// request.
 	Info() RequestInfo
+
+	// Protocol returns the underlying protocol of the session.
 	Protocol() Protocol
 }
 
-// structure for polling sessions
-type session struct {
+// Session for legacy protocols.
+type legacySession struct {
 	// read-only
 	proto protocol
-
-	in chan []byte
-	rio sync.Mutex
-	rbuf *list
-
+	config *Config
 
 	closer chan struct{}
-	inBuf chan chan *bufEnvelope
-	inOut chan []byte
-	out chan *writeEnvelope
-	wc chan io.WriteCloser
+	receiveToken chan chan []byte
+	receiveBuffer chan []byte
+	receiveOut chan []byte
+	sendBuffer chan []byte
+	sendFrame chan []byte
 	hbTicker *time.Ticker
 	dcTicker *time.Ticker
 
 	mu sync.RWMutex
+	closed_ bool
+	closeCode int
+	closeReason string
+	info         *RequestInfo
 	interrupted_ bool
 	reserved     bool
-	info         *RequestInfo
+	recvStamp time.Time
 }
 
-func (s *session) init(r *http.Request, proto protocol, config *config) {
-	s.proto = proto
-	s.hbTicker = time.NewTicker(config.HeartbeatDelay)
-	s.dcTicker = time.NewTicker(config.DisconnectionDelay)
-	go backend()
+func (s *legacySession) Receive() []byte {
+	return <-s.receiveOut
 }
 
-func (s *session) backend() {
-	rbuf := list.New()
-	wbuf := list.New()
-	defer close(s.closer)
-	defer close(s.inBuf)
-	defer close(s.inOut)
-	defer s.hbTicker.Stop()
-	defer s.dcTicker.Stop()
-
-	for {
-		if rbuf.Len() > 0 {
-			// try sending a messages to Read()
-			front := rbuf.Front()
-			select {
-			default:
-			case s.inOut <- front.Value.([]byte):
-				rbuf.Remove(front)
-			}
-		}
-
-
-		rbufDone := make(chan struct{})
-		select {
-		case <-s.closer:
-			return
-
-			// loan rbuf to a reader
-		case s.inBuf <- &bufEnvelope{rbuf, rbufDone):
-			<-rbufDone
-
-		case <-s.dcTicker:
-			// TODO
-		}
-	}
+func (s *legacySession) Send(m []byte) {
+	s.sendBuffer <- m
 }
 
-func (s *session) Receive() ([]byte, error) {
-	m, closed := <-s.inOut
-	if closed { return nil, ErrSessionClosed }
-	return m, nil
+func (s *legacySession) End() {
+	s.Close(3000, "Go away!")
 }
 
-func (s *session) Send(m []byte) (err error) {
-	rv := make(chan error)
-	select {
-	case <-s.closer:
-		return ErrSessionClosed
-	case s.out <- &connWrite(m, rv):
-	}
-	return <-rv
+func (s *legacySession) Close(code int, reason string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed_ { return }
+	s.closed_ = true
+	s.closeCode = code
+	s.closeReason = reason
+
+	s.closer <- struct{}{}
 }
 
-func (s *session) Close() error {
-	select{
-	default:
-	case <-s.closer:
-	}
+func (s *legacySession) Protocol() Protocol {
+	return s.proto.protocol()
 }
 
-func (s *session) Info() RequestInfo {
+func (s *legacySession) Info() RequestInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return *s.info
 }
 
-func (s *session) Protocol() Protocol {
-	return s.proto.protocol()
+func (s *legacySession) init(r *http.Request, proto protocol, config *Config) {
+	s.config = config
+	s.proto = proto
+	s.closer = make(chan struct{})
+	s.receiveToken = make(chan chan []byte)
+	s.receiveBuffer = make(chan []byte)
+	s.receiveOut = make(chan []byte)
+	s.sendBuffer = make(chan []byte)
+	s.sendFrame = make(chan []byte)
+	s.hbTicker = time.NewTicker(config.HeartbeatDelay)
+	s.dcTicker = time.NewTicker(config.DisconnectDelay)
+	go s.backend()
 }
 
-func (s *session) setInfo(info *RequestInfo) {
+func (s *legacySession) backend() {
+	receiveToken := make(chan []byte)
+	defer close(s.receiveToken)
+	defer close(s.receiveBuffer)
+	defer close(s.sendBuffer)
+	defer s.hbTicker.Stop()
+	defer s.dcTicker.Stop()
+	go receiveBuffer(s.receiveBuffer, s.receiveOut)
+	go s.sendBuffer_(s.sendBuffer, s.sendFrame)
+
+	for {
+		select {
+		case s.receiveToken <- receiveToken:
+			s.receiveBuffer <- <-receiveToken
+
+		case <-s.hbTicker.C:
+			s.sendFrame <- []byte{'h'}
+
+		case <-s.closer:
+			return
+
+		case <-s.dcTicker.C:
+			if s.timeouted() { 
+				s.mu.Lock()
+				s.closed_ = true
+				s.closeCode = 3000
+				s.closeReason = "Go away!"
+				s.mu.Unlock()
+
+				return
+			}
+		}
+	}
+}
+
+func receiveBuffer(in <-chan []byte, out chan<- []byte) {
+	pending := list.New()
+	defer close(out)
+	
+loop:
+	for {
+		// keep pending non-empty
+		if pending.Len() == 0 {
+			v, ok := <-in
+			if !ok {
+				break
+			}
+			pending.PushBack(v)
+		}
+		
+		select {
+		case v, ok := <-in:
+			if !ok {
+				break loop
+			}
+			pending.PushBack(v)
+
+		case out <- pending.Remove(pending.Front()).([]byte):
+		}
+	}
+}
+
+func (s *legacySession) sendBuffer_(in <-chan []byte, out chan<- []byte) {
+ 	var pending [][]byte
+	defer close(out)
+	
+loop:
+	for {
+		// keep pending non-empty
+		if len(pending) == 0 {
+			v, ok := <-in
+			if !ok {
+				break
+			}
+			pending = append(pending, v)
+		}
+
+		select {
+		case v, ok := <-in:
+			if !ok {
+				break loop
+			}
+			pending = append(pending, v)
+
+		case out <- aframe(pending...):
+			pending = nil
+		}
+	}
+	
+	// Try sending the remaining values, but don't wait more than Config.DisconnectDelay.
+	if len(pending) > 0 {
+		select {
+		case out <- aframe(pending...):
+		case <-time.After(s.config.DisconnectDelay):
+		}
+	}
+}
+
+func (s *legacySession) closeFrame() []byte {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return cframe(s.closeCode, s.closeReason)
+}
+
+// Closed returns true, if the session is closed.
+func (s *legacySession) closed() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.closed_
+}
+
+func (s *legacySession) setInfo(info *RequestInfo) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.info = info
 }
 
-// Reserve marks the session reserved so that other connections know not read from it.
-// True is returned, if the reservation fails, otherwise false.
-func (s *session) reserve() bool {
+// Reserve marks the session reserved so that other connections know not receive from it.
+// False is returned, if the reservation fails, otherwise true.
+func (s *legacySession) reserve() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.reserved {
-		return true
+		return false
 	}
 	s.reserved = true
-	return false
+	return true
 }
 
-// Free marks the session free for read for other connections.
-func (s *session) free() {
+// Free marks the session free for receiving for other connections.
+func (s *legacySession) free() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.reserved = false
 }
 
-// Interrupted returns true, if the session was interrupted.
-func (s *session) interrupted() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.interrupted_
-}
-
 // Interrupt marks the session interrupted.
-func (s *session) interrupt() {
+func (s *legacySession) interrupt() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.interrupted_ = true
@@ -175,8 +251,24 @@ func (s *session) interrupt() {
 
 // VerifyAddr returns true, if the given remote address matches the one used in the last request,
 // otherwise false.
-func (s *session) verifyAddr(addr string) bool {
+func (s *legacySession) verifyAddr(addr string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return verifyAddr(s.info.RemoteAddr, addr)
+}
+
+func (s *legacySession) timeouted() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if time.Since(s.recvStamp) > time.Duration(s.config.DisconnectDelay)*time.Second {
+		return true
+	}
+	return false
+}
+
+func (s *legacySession) updateRecvStamp() {
+	s.mu.Lock()
+	defer s.mu.Unlock()	
+	s.recvStamp = time.Now()
 }

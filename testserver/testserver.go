@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/fzzbt/sockjs-go/sockjs"
+	"github.com/fzzy/sockjs-go/sockjs"
 	"net/http"
 )
 
@@ -10,9 +10,8 @@ func echoHandler(s sockjs.Session) {
 	fmt.Println("session opened")
 	
 	for {
-		m, err := s.Receive()
-		if err != nil {
-			println("ERR:",err.Error())
+		m := s.Receive()
+		if m == nil {
 			break
 		}
 		fmt.Println("Received:", string(m))
@@ -35,7 +34,7 @@ func main() {
 	server.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
 	server.Handle("/cookie_needed_echo", echoHandler, cookieconf)
 	server.Handle("/close",
-		func(s sockjs.Session) { s.Close() },
+		func(s sockjs.Session) { s.End() },
 		conf)
 	err := http.ListenAndServe(":8081", server)
 	if err != nil {
