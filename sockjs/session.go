@@ -52,12 +52,15 @@ type legacySession struct {
 
 	mu sync.RWMutex
 	closed_ bool
+	sendBufClosed bool
 	closeCode int
 	closeReason string
 	info         *RequestInfo
 	reserved     bool
 	recvStamp time.Time
 }
+
+//* Public methods
 
 func (s *legacySession) Receive() []byte {
 	s.rio.Lock()
@@ -80,16 +83,14 @@ func (s *legacySession) End() {
 }
 
 func (s *legacySession) Close(code int, reason string) {
+	s.close(code, reason)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed_ { return }
-	s.closed_ = true
-	s.closeCode = code
-	s.closeReason = reason
+	if s.sendBufClosed { return }
+	s.sendBufClosed = true
 	close(s.sendBuffer)
-	s.hbTicker.Stop()
-	s.rbufEmpty.Broadcast()
 }
 
 func (s *legacySession) Protocol() Protocol {
@@ -101,6 +102,8 @@ func (s *legacySession) Info() RequestInfo {
 	defer s.mu.RUnlock()
 	return *s.info
 }
+
+//* Private methods
 
 func (s *legacySession) init(config *Config, proto protocol, sessid string, pool *pool) {
 	s.config = config
@@ -127,7 +130,7 @@ loop:
 		case <-s.dcTicker.C:
 			if s.timeouted() { 
 				// close in case it wasn't closed already
-				s.End()
+				s.end()
 				break loop
 			}
 		}
@@ -192,6 +195,22 @@ func (s *legacySession) closed() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.closed_
+}
+
+func (s *legacySession) end() {
+	s.close(3000, "Go away!")
+}
+
+func (s *legacySession) close(code int, reason string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed_ { return }
+	s.closed_ = true
+	s.closeCode = code
+	s.closeReason = reason
+	s.hbTicker.Stop()
+	s.rbufEmpty.Broadcast()
 }
 
 func (s *legacySession) setInfo(info *RequestInfo) {

@@ -127,7 +127,7 @@ func legacyHandler(h *handler,
 		// one time close message
 		p.write(w, cframe(2010, "Another connection still open"))
 
-		s.Close(1002, "Connection interrupted")
+		s.close(1002, "Connection interrupted")
 		return
 	}
 	defer s.free()
@@ -159,6 +159,6 @@ func legacyHandler(h *handler,
 
 disconnect:
 	// close the session in case it hasn't been closed already
-	s.End()
+	s.end()
 	p.write(w, s.closeFrame())
 }
