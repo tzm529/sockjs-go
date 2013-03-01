@@ -102,7 +102,7 @@ func legacyHandler(h *handler,
 			h.pool.remove(sessid)
 			goto disconnect
 		}
-		s.init(r, p, h.config)
+		s.init(h.config, p, sessid, h.pool)
 		s.setInfo(newRequestInfo(r, h.prefix, h.config.Headers))
 		infoset = true
 		go h.hfunc(s)
@@ -127,7 +127,6 @@ func legacyHandler(h *handler,
 		// one time close message
 		p.write(w, cframe(2010, "Another connection still open"))
 
-		s.interrupt()
 		s.Close(1002, "Connection interrupted")
 		return
 	}
@@ -136,6 +135,8 @@ func legacyHandler(h *handler,
 	if !infoset { 
 		s.setInfo(newRequestInfo(r, h.prefix, h.config.Headers))
 	}
+	s.updateRecvStamp()
+
 
 	if pw == nil {
 		//* polling

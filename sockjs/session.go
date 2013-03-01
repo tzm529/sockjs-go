@@ -1,7 +1,6 @@
 package sockjs
 
 import (
-	"net/http"
 	"sync"
 	"time"
 	"container/list"
@@ -38,8 +37,9 @@ type legacySession struct {
 	// read-only
 	proto protocol
 	config *Config
+	sessid string
+	pool *pool
 
-	closer chan struct{}
 	sendBuffer chan []byte
 	sendFrame chan []byte
 	hbTicker *time.Ticker
@@ -54,7 +54,6 @@ type legacySession struct {
 	closeCode int
 	closeReason string
 	info         *RequestInfo
-	interrupted_ bool
 	reserved     bool
 	recvStamp time.Time
 }
@@ -87,8 +86,8 @@ func (s *legacySession) Close(code int, reason string) {
 	s.closed_ = true
 	s.closeCode = code
 	s.closeReason = reason
-
-	s.closer <- struct{}{}
+	close(s.sendBuffer)
+	s.hbTicker.Stop()
 }
 
 func (s *legacySession) Protocol() Protocol {
@@ -101,10 +100,11 @@ func (s *legacySession) Info() RequestInfo {
 	return *s.info
 }
 
-func (s *legacySession) init(r *http.Request, proto protocol, config *Config) {
+func (s *legacySession) init(config *Config, proto protocol, sessid string, pool *pool) {
 	s.config = config
 	s.proto = proto
-	s.closer = make(chan struct{})
+	s.sessid = sessid
+	s.pool = pool
 	s.rbufEmpty = sync.NewCond(&s.rio)
 	s.rbuf = list.New()
 	s.sendBuffer = make(chan []byte)
@@ -112,34 +112,27 @@ func (s *legacySession) init(r *http.Request, proto protocol, config *Config) {
 	s.hbTicker = time.NewTicker(config.HeartbeatDelay)
 	s.dcTicker = time.NewTicker(config.DisconnectDelay)
 	go s.backend()
+	go s.sendBuffer_(s.sendBuffer, s.sendFrame)
 }
 
 func (s *legacySession) backend() {
-	defer close(s.sendBuffer)
-	defer s.hbTicker.Stop()
-	defer s.dcTicker.Stop()
-	go s.sendBuffer_(s.sendBuffer, s.sendFrame)
-
+loop:
 	for {
 		select {
 		case <-s.hbTicker.C:
 			s.sendFrame <- []byte{'h'}
 
-		case <-s.closer:
-			return
-
 		case <-s.dcTicker.C:
 			if s.timeouted() { 
-				s.mu.Lock()
-				s.closed_ = true
-				s.closeCode = 3000
-				s.closeReason = "Go away!"
-				s.mu.Unlock()
-
-				return
+				// close in case it wasn't closed already
+				s.End()
+				break loop
 			}
 		}
 	}
+
+	s.dcTicker.Stop()
+	s.pool.remove(s.sessid)
 }
 
 func (s *legacySession) rbufAppend(m []byte) {
@@ -222,13 +215,6 @@ func (s *legacySession) free() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.reserved = false
-}
-
-// Interrupt marks the session interrupted.
-func (s *legacySession) interrupt() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.interrupted_ = true
 }
 
 // VerifyAddr returns true, if the given remote address matches the one used in the last request,

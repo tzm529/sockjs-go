@@ -14,7 +14,6 @@ func echoHandler(s sockjs.Session) {
 		if m == nil {
 			break
 		}
-		fmt.Println("Received:", string(m))
 		s.Send(m)
 	}
 	fmt.Println("session closing")
