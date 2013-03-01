@@ -88,6 +88,7 @@ func (s *legacySession) Close(code int, reason string) {
 	s.closeReason = reason
 	close(s.sendBuffer)
 	s.hbTicker.Stop()
+	s.rbufEmpty.Broadcast()
 }
 
 func (s *legacySession) Protocol() Protocol {
