@@ -6,6 +6,7 @@ import (
 	"container/list"
 )
 
+// Session describes a sockjs session.
 type Session interface {
 	// Receive blocks until a message can be returned from session receive buffer or nil, 
 	// if the session is closed.
@@ -21,7 +22,7 @@ type Session interface {
 	Close(code int, reason string)
 
 	// End is a convenience method for closing with the default code and reason, 
-	// `Close(3000, "Go away!")`.
+	// Close(3000, "Go away!").
 	End()
 
 	// Info returns a RequestInfo object containing information copied from the last received 

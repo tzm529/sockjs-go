@@ -30,8 +30,8 @@ type Config struct {
 	// Function that is called to set the JSESSIONID cookie, if Jsessionid setting is set.
 	JsessionidFunc func(http.ResponseWriter, *http.Request)
 
-	// Enables IP-address checks for polling transports. 
-	// If enabled, all subsequent polling calls must be from the same IP-address.
+	// Enables IP-address checks for legacy transports. 
+	// If enabled, all subsequent calls must be from the same IP-address.
 	// Default: true
 	VerifyAddr bool
 
@@ -56,6 +56,7 @@ type Config struct {
 	iframeHash string
 }
 
+// NewConfig returns a new Config with the default settings.
 func NewConfig() (c Config) {
 	c.SockjsURL = "https://cdn.sockjs.org/sockjs-0.3.4.min.js"
 	c.Websocket = true

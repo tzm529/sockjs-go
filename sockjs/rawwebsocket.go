@@ -25,9 +25,10 @@ func (s *rawWebsocketSession) End() {
 }
 
 func (s *rawWebsocketSession) Close(code int, reason string) {
-	// BUG: Websocket.Close() Should specify code and reason.
-	//      Websocket package does not allow doing this.
-	//      http://code.google.com/p/go/issues/detail?id=4588
+	// BUG(fzzy): 
+	// Websocket.Close() Should specify code and reason.
+	// Websocket package does not allow doing this.
+	// http://code.google.com/p/go/issues/detail?id=4588
 	s.ws.Close()
 }
 
