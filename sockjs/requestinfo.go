@@ -5,6 +5,7 @@ import (
 	"net/url"
 )
 
+// Protocol describes a SockJS transport protocol.
 type Protocol uint8
 
 const (
@@ -43,6 +44,7 @@ type RequestInfo struct {
 func newRequestInfo(r *http.Request, prefix string, headers []string) (info *RequestInfo) {
 	info = new(RequestInfo)
 	info.URL = *r.URL
+	info.Header = make(http.Header)
 	info.Host = r.Host
 	info.RequestURI = r.RequestURI
 	info.RemoteAddr = r.RemoteAddr
