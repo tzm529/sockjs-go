@@ -1,11 +1,11 @@
 package sockjs
 
 import (
-	"os"
-	"log"
 	"crypto/md5"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 )
 

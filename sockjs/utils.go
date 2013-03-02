@@ -1,13 +1,14 @@
 package sockjs
 
 import (
-	"io"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
 //	"time"
 )
 
@@ -63,11 +64,3 @@ func hfuncCloseWrapper(hfunc func(Session)) func(Session) {
 		s.End()
 	}
 }
-/*
-func heartbeater(w io.Writer, delay time.Duration) {
-	for {
-		time.Sleep(delay)
-		err := p.WriteHeartbeat(w)
-		if err != nil { return }
-	}
-}*/

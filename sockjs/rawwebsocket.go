@@ -12,7 +12,9 @@ type rawWebsocketSession struct {
 
 func (s *rawWebsocketSession) Receive() (data []byte) {
 	err := websocket.Message.Receive(s.ws, &data)
-	if err != nil { return nil }
+	if err != nil {
+		return nil
+	}
 	return data
 }
 

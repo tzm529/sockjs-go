@@ -1,12 +1,12 @@
 package sockjs
 
 import (
+	"container/list"
 	"sync"
 	"time"
-	"container/list"
 )
 
-// Session describes a sockjs session.
+// Session describes a SockJS session.
 type Session interface {
 	// Receive blocks until a message can be returned from session receive buffer or nil, 
 	// if the session is closed.
@@ -36,28 +36,28 @@ type Session interface {
 // Session for legacy protocols.
 type legacySession struct {
 	// read-only
-	proto protocol
+	proto  protocol
 	config *Config
 	sessid string
-	pool *pool
+	pool   *pool
 
 	sendBuffer chan []byte
-	sendFrame chan []byte
-	hbTicker *time.Ticker
-	dcTicker *time.Ticker
+	sendFrame  chan []byte
+	hbTicker   *time.Ticker
+	dcTicker   *time.Ticker
 
-	rio sync.Mutex
+	rio       sync.Mutex
 	rbufEmpty *sync.Cond
-	rbuf *list.List
+	rbuf      *list.List
 
-	mu sync.RWMutex
-	closed_ bool
+	mu            sync.RWMutex
+	closed_       bool
 	sendBufClosed bool
-	closeCode int
-	closeReason string
-	info         *RequestInfo
-	reserved     bool
-	recvStamp time.Time
+	closeCode     int
+	closeReason   string
+	info          *RequestInfo
+	reserved      bool
+	recvStamp     time.Time
 }
 
 //* Public methods
@@ -67,7 +67,9 @@ func (s *legacySession) Receive() []byte {
 	defer s.rio.Unlock()
 
 	for s.rbuf.Len() == 0 {
-		if s.closed() { return nil }
+		if s.closed() {
+			return nil
+		}
 		s.rbufEmpty.Wait()
 	}
 
@@ -88,7 +90,9 @@ func (s *legacySession) Close(code int, reason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.sendBufClosed { return }
+	if s.sendBufClosed {
+		return
+	}
 	s.sendBufClosed = true
 	close(s.sendBuffer)
 }
@@ -128,7 +132,7 @@ loop:
 			s.sendFrame <- []byte{'h'}
 
 		case <-s.dcTicker.C:
-			if s.timeouted() { 
+			if s.timeouted() {
 				// close in case it wasn't closed already
 				s.end()
 				break loop
@@ -149,9 +153,9 @@ func (s *legacySession) rbufAppend(m []byte) {
 }
 
 func (s *legacySession) sendBuffer_(in <-chan []byte, out chan<- []byte) {
- 	var pending [][]byte
+	var pending [][]byte
 	defer close(out)
-	
+
 loop:
 	for {
 		// keep pending non-empty
@@ -174,7 +178,7 @@ loop:
 			pending = nil
 		}
 	}
-	
+
 	// Try sending the remaining values, but don't wait more than Config.DisconnectDelay.
 	if len(pending) > 0 {
 		select {
@@ -205,7 +209,9 @@ func (s *legacySession) close(code int, reason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed_ { return }
+	if s.closed_ {
+		return
+	}
 	s.closed_ = true
 	s.closeCode = code
 	s.closeReason = reason
@@ -258,6 +264,6 @@ func (s *legacySession) timeouted() bool {
 
 func (s *legacySession) updateRecvStamp() {
 	s.mu.Lock()
-	defer s.mu.Unlock()	
+	defer s.mu.Unlock()
 	s.recvStamp = time.Now()
 }

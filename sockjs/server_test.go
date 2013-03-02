@@ -11,15 +11,16 @@ var _ = Suite(&ServerSuite{})
 
 // plain http.Handler is not comparable
 type nopHandler int
+
 func (n nopHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
 
 func (s *ServerSuite) TestServerMatch(c *C) {
+	conf := NewConfig()
 	alt := nopHandler(0)
-	long := newHandler("/prefix/long", nil, NewConfig())
-	short := newHandler("/prefix", nil, NewConfig())
+	long := newHandler(nil, "/prefix/long", nil, &conf)
+	short := newHandler(nil, "/prefix", nil, &conf)
 
 	server := NewServer(alt)
-	defer server.Close()
 	server.m["/prefix/long"] = long
 	server.m["/prefix"] = short
 

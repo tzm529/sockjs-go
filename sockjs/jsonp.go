@@ -98,5 +98,5 @@ func jsonpSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid
 	return
 
 closed:
-	http.NotFound(w, r)	
+	http.NotFound(w, r)
 }

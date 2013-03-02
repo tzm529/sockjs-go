@@ -5,9 +5,9 @@ import (
 	"sync"
 )
 
-// Server is sockjs-compatible HTTP request multiplexer, similar to http.ServeMux,
-// but just for sockjs handlers. It can optionally wrap an alternate http.Handler which is called 
-// for non-sockjs paths.
+// Server is SockJS-compatible HTTP request multiplexer, similar to http.ServeMux,
+// but just for SockJS handlers. It can optionally wrap an alternate http.Handler which is called 
+// for non-SockJS paths.
 type Server struct {
 	mu   sync.RWMutex
 	m    map[string]*handler

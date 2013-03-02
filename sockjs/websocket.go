@@ -6,29 +6,29 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 	"sync"
+	"time"
 )
 
 type websocketClosure struct {
 	abrupt bool
-	code int
+	code   int
 	reason string
 }
 
 type websocketSession struct {
 	info *RequestInfo
-	ws *websocket.Conn
+	ws   *websocket.Conn
 
-	closer chan *websocketClosure
+	closer   chan *websocketClosure
 	hbTicker *time.Ticker
 	dcTicker *time.Ticker
 
 	// lock for making Receive() thread-safe
-	rio sync.Mutex
+	rio  sync.Mutex
 	rbuf [][]byte
 
-	mu sync.RWMutex
+	mu     sync.RWMutex
 	closed bool
 }
 
@@ -48,15 +48,19 @@ again:
 	var messages []string
 
 	err := websocket.Message.Receive(s.ws, &data)
-	if err != nil { goto disconnect }
+	if err != nil {
+		goto disconnect
+	}
 
 	// ignore, no frame
 	if len(data) == 0 {
-		goto again 
+		goto again
 	}
 
 	err = json.Unmarshal(data, &messages)
-	if err != nil {	goto disconnect	}
+	if err != nil {
+		goto disconnect
+	}
 
 	// ignore, no messages
 	if len(messages) == 0 {
@@ -87,7 +91,9 @@ func (s *websocketSession) Close(code int, reason string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed { return }
+	if s.closed {
+		return
+	}
 	s.closed = true
 
 	closure := new(websocketClosure)
@@ -110,7 +116,7 @@ func (s *websocketSession) backend() {
 		select {
 		case <-s.hbTicker.C:
 			_, err := s.ws.Write([]byte{'h'})
-			if err != nil { 
+			if err != nil {
 				s.mu.Lock()
 				s.closed = true
 				s.mu.Unlock()
@@ -131,7 +137,9 @@ func (s *websocketSession) abruptClose() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.closed { return }
+	if s.closed {
+		return
+	}
 	s.closed = true
 
 	closure := new(websocketClosure)

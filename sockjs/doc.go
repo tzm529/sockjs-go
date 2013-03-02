@@ -24,7 +24,7 @@ Example echo server:
 			s.Send(m)
 		}
 	}
-	
+
 	func main() {
 		server := sockjs.NewServer(http.DefaultServeMux)
 		server.Handle("/echo", echoHandler, sockjs.NewConfig())

@@ -11,15 +11,11 @@ type PoolSuite struct {
 var _ = Suite(&PoolSuite{})
 
 func (s *PoolSuite) SetUpTest(c *C) {
-	s.p = newPool(NewConfig().DisconnectDelay)
-}
-
-func (s *PoolSuite) TearDownTest(c *C) {
-	s.p.close()
+	s.p = newPool()
 }
 
 func (s *PoolSuite) TestPoolGet(c *C) {
-	session := new(session)
+	session := new(legacySession)
 	s.p.pool["foo"] = session
 	c.Check(s.p.get("foo"), Equals, session)
 }
@@ -35,7 +31,7 @@ func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
 }
 
 func (s *PoolSuite) TestPoolRemove(c *C) {
-	session := new(session)
+	session := new(legacySession)
 	s.p.pool["foo"] = session
 	s.p.remove("foo")
 	_, exists := s.p.pool["foo"]

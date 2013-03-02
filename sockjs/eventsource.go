@@ -1,8 +1,8 @@
 package sockjs
 
 import (
-	"io"
 	"fmt"
+	"io"
 )
 
 type eventSourceProtocol struct{}

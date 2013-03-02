@@ -132,26 +132,33 @@ func legacyHandler(h *handler,
 	}
 	defer s.free()
 
-	if !infoset { 
+	if !infoset {
 		s.setInfo(newRequestInfo(r, h.prefix, h.config.Headers))
 	}
 	s.updateRecvStamp()
 
-
 	if pw == nil {
 		//* polling
 		m, ok := <-s.sendFrame
-		if !ok { goto disconnect }
+		if !ok {
+			goto disconnect
+		}
 		_, err = p.write(w, m)
-		if err != nil { goto disconnect }
+		if err != nil {
+			goto disconnect
+		}
 	} else {
 		//* streaming
 		var n int
 		for sent := 0; sent < h.config.ResponseLimit; {
 			m, ok := <-s.sendFrame
-			if !ok { goto disconnect }
+			if !ok {
+				goto disconnect
+			}
 			n, err = p.write(w, m)
-			if err != nil { goto disconnect }
+			if err != nil {
+				goto disconnect
+			}
 			sent += n
 		}
 	}
