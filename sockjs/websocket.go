@@ -20,11 +20,11 @@ type websocketSession struct {
 	// read-only
 	config *Config
 	info   *RequestInfo
+	sessid string
 	ws     *websocket.Conn
 
 	closer   chan *websocketClosure
 	hbTicker *time.Ticker
-	dcTicker *time.Ticker
 
 	// lock for making Receive() thread-safe
 	rio  sync.Mutex
@@ -32,7 +32,7 @@ type websocketSession struct {
 
 	mu     sync.RWMutex
 	closed bool
-	sessid string
+
 }
 
 //* Public methods
@@ -118,8 +118,6 @@ func (s *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
 
 // for logging purposes
 func (s *websocketSession) String() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.info.RemoteAddr + "/" + s.sessid
 }
 
@@ -149,7 +147,6 @@ loop:
 	}
 
 	s.hbTicker.Stop()
-	s.dcTicker.Stop()
 	s.ws.Close()
 	logPrintf(s.config.Logger, "%s: session closed\n", s)
 }
@@ -207,7 +204,6 @@ func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid
 		s.sessid = sessid
 		s.closer = make(chan *websocketClosure)
 		s.hbTicker = time.NewTicker(s.config.HeartbeatDelay)
-		s.dcTicker = time.NewTicker(s.config.DisconnectDelay)
 		go s.backend()
 		h.hfunc(s)
 	})
