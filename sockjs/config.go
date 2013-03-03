@@ -47,9 +47,11 @@ type Config struct {
 	// Default: []string{"referer", "x-client-ip", "x-forwarded-for",
 	//                   "x-cluster-client-ip", "via", "x-real-ip", "host"}
 	Headers []string
-
-	// Logger used for logging various information such as errors.
-	// Default: log.New(os.Stdout, "sockjs", 0)
+	
+	// Logger used for logging various information.
+	// Useful for debugging.
+	// Set Logger to nil to disable logging.
+	// Default: log.New(os.Stdout, "sockjs: ", log.LstdFlags)
 	Logger *log.Logger
 
 	iframePage []byte
@@ -66,7 +68,7 @@ func NewConfig() (c Config) {
 	c.DisconnectDelay = time.Duration(5) * time.Second
 	c.Headers = []string{"referer", "x-client-ip", "x-forwarded-for",
 		"x-cluster-client-ip", "via", "x-real-ip", "host"}
-	c.Logger = log.New(os.Stdout, "sockjs", 0)
+	c.Logger = log.New(os.Stdout, "sockjs: ", log.LstdFlags)
 	c.iframePage = []byte(fmt.Sprintf(iframePageFormat, c.SockjsURL))
 	hash := md5.New()
 	hash.Write(c.iframePage)

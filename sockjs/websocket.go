@@ -17,6 +17,8 @@ type websocketClosure struct {
 }
 
 type websocketSession struct {
+	// read-only
+	config *Config
 	info *RequestInfo
 	ws   *websocket.Conn
 
@@ -30,7 +32,10 @@ type websocketSession struct {
 
 	mu     sync.RWMutex
 	closed bool
+	sessid string
 }
+
+//* Public methods
 
 func (s *websocketSession) Receive() []byte {
 	s.rio.Lock()
@@ -75,12 +80,16 @@ again:
 	return m
 
 disconnect:
+	logPrintf(s.config.Logger, "%s: receive error: %s\n", s, err)
 	s.abruptClose()
 	return nil
 }
 
 func (s *websocketSession) Send(m []byte) {
-	s.ws.Write(aframe(m))
+	_, err := s.ws.Write(aframe(m))
+	if err != nil {
+		logPrintf(s.config.Logger, "%s: send error: %s\n", s, err)
+	}
 }
 
 func (s *websocketSession) End() {
@@ -107,6 +116,15 @@ func (s *websocketSession) Close(code int, reason string) {
 func (s *websocketSession) Info() RequestInfo  { return *s.info }
 func (s *websocketSession) Protocol() Protocol { return ProtocolWebsocket }
 
+// for logging purposes
+func (s *websocketSession) String() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.info.RemoteAddr + "/" + s.sessid
+}
+
+//* Private methods
+
 func (s *websocketSession) backend() {
 	defer s.hbTicker.Stop()
 	defer s.dcTicker.Stop()
@@ -117,6 +135,7 @@ func (s *websocketSession) backend() {
 		case <-s.hbTicker.C:
 			_, err := s.ws.Write([]byte{'h'})
 			if err != nil {
+				logPrintf(s.config.Logger, "%s: heartbeat error: %s\n", s, err)
 				s.mu.Lock()
 				s.closed = true
 				s.mu.Unlock()
@@ -148,7 +167,7 @@ func (s *websocketSession) abruptClose() {
 	s.closer <- closure
 }
 
-func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request) {
+func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid string) {
 	if !h.config.Websocket {
 		http.NotFound(w, r)
 		return
@@ -181,10 +200,12 @@ func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 
 		s := new(websocketSession)
 		s.ws = ws
-		s.info = newRequestInfo(r, h.prefix, h.config.Headers)
+		s.config = h.config
+		s.info = newRequestInfo(r, h.prefix, s.config.Headers)
+		s.sessid = sessid
 		s.closer = make(chan *websocketClosure)
-		s.hbTicker = time.NewTicker(h.config.HeartbeatDelay)
-		s.dcTicker = time.NewTicker(h.config.DisconnectDelay)
+		s.hbTicker = time.NewTicker(s.config.HeartbeatDelay)
+		s.dcTicker = time.NewTicker(s.config.DisconnectDelay)
 		go s.backend()
 		h.hfunc(s)
 	})

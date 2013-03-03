@@ -107,6 +107,13 @@ func (s *legacySession) Info() RequestInfo {
 	return *s.info
 }
 
+// for logging purposes
+func (s *legacySession) String() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.info.RemoteAddr + "/" + s.sessid
+}
+
 //* Private methods
 
 func (s *legacySession) init(config *Config, proto protocol, sessid string, pool *pool) {

@@ -50,7 +50,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		protocol := matches[2]
 		switch protocol {
 		case "websocket":
-			websocketHandler(h, w, r)
+			websocketHandler(h, w, r, sessid)
 		case "eventsource":
 			legacyHandler(h, w, r, sessid, eventSourceProtocol{})
 		case "htmlfile":

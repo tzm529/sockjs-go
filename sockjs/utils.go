@@ -8,8 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode/utf8"
-
-//	"time"
+	"log"
 )
 
 var dummyCookie = &http.Cookie{
@@ -62,5 +61,11 @@ func hfuncCloseWrapper(hfunc func(Session)) func(Session) {
 	return func(s Session) {
 		hfunc(s)
 		s.End()
+	}
+}
+
+func logPrintf(logger *log.Logger, format string, args ...interface{}) {
+	if logger != nil {
+		logger.Printf(format, args...)
 	}
 }
