@@ -126,10 +126,8 @@ func (s *websocketSession) String() string {
 //* Private methods
 
 func (s *websocketSession) backend() {
-	defer s.hbTicker.Stop()
-	defer s.dcTicker.Stop()
-	defer s.ws.Close()
-
+	logPrintf(s.config.Logger, "%s: session opened\n", s)
+loop:
 	for {
 		select {
 		case <-s.hbTicker.C:
@@ -139,17 +137,21 @@ func (s *websocketSession) backend() {
 				s.mu.Lock()
 				s.closed = true
 				s.mu.Unlock()
-				return
+				break loop
 			}
 
 		case c := <-s.closer:
 			if !c.abrupt {
 				s.ws.Write(cframe(c.code, c.reason))
 			}
-			return
+			break loop
 		}
 	}
 
+	s.hbTicker.Stop()
+	s.dcTicker.Stop()
+	s.ws.Close()
+	logPrintf(s.config.Logger, "%s: session closed\n", s)
 }
 
 func (s *websocketSession) abruptClose() {

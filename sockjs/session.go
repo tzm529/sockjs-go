@@ -132,6 +132,7 @@ func (s *legacySession) init(config *Config, proto protocol, sessid string, pool
 }
 
 func (s *legacySession) backend() {
+	logPrintf(s.config.Logger, "%s: session opened\n", s)
 loop:
 	for {
 		select {
@@ -149,6 +150,7 @@ loop:
 
 	s.dcTicker.Stop()
 	s.pool.remove(s.sessid)
+	logPrintf(s.config.Logger, "%s: session closed\n", s)
 }
 
 func (s *legacySession) rbufAppend(m []byte) {
