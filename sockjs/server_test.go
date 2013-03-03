@@ -17,8 +17,8 @@ func (n nopHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
 func (s *ServerSuite) TestServerMatch(c *C) {
 	conf := NewConfig()
 	alt := nopHandler(0)
-	long := newHandler(nil, "/prefix/long", nil, &conf)
-	short := newHandler(nil, "/prefix", nil, &conf)
+	long := newHandler("/prefix/long", nil, &conf)
+	short := newHandler("/prefix", nil, &conf)
 
 	server := NewServer(alt)
 	server.m["/prefix/long"] = long

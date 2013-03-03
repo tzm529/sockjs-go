@@ -12,14 +12,12 @@ type Server struct {
 	mu   sync.RWMutex
 	m    map[string]*handler
 	alt  http.Handler
-	pool *pool
 }
 
 func NewServer(alt http.Handler) *Server {
 	m := new(Server)
 	m.m = make(map[string]*handler)
 	m.alt = alt
-	m.pool = newPool()
 	return m
 }
 
@@ -37,7 +35,7 @@ func (m *Server) Handle(prefix string, hfunc func(Session), c Config) {
 	}
 
 	m.mu.Lock()
-	m.m[prefix] = newHandler(m.pool, prefix, hfunc, &c)
+	m.m[prefix] = newHandler(prefix, hfunc, &c)
 	m.mu.Unlock()
 }
 

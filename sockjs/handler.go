@@ -19,12 +19,12 @@ type handler struct {
 	pool   *pool
 }
 
-func newHandler(pool *pool, prefix string, hfunc func(Session), c *Config) (h *handler) {
+func newHandler(prefix string, hfunc func(Session), c *Config) (h *handler) {
 	h = new(handler)
 	h.prefix = prefix
 	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
-	h.pool = pool
+	h.pool = newPool()
 	return h
 }
 
