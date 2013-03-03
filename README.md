@@ -7,7 +7,7 @@ sockjs is a package for Go that implements a sockjs server.
 
 ## Installation
 
-    go get github.com/fzzbt/sockjs-go/sockjs
+    go get github.com/fzzy/sockjs-go/sockjs
 
 
 ## Getting started
@@ -16,13 +16,13 @@ TODO
 
 ## API reference
 
-API reference is available in http://gopkgdoc.appspot.com/pkg/github.com/fzzbt/sockjs-go/sockjs.
+API reference is available in http://gopkgdoc.appspot.com/pkg/github.com/fzzy/sockjs-go/sockjs.
 
 Alternatively, run godoc for API reference:
 
 	godoc -http=:8080
 
-and point your browser to http://localhost:8080/pkg/github.com/fzzbt/sockjs-go/sockjs.
+and point your browser to http://localhost:8080/pkg/github.com/fzzy/sockjs-go/sockjs.
 
 
 ## HACKING
