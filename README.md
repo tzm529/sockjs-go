@@ -35,6 +35,6 @@ If you make contributions to the project, please follow the guidelines below:
 
 ## Copyright and licensing
 
-*Copyright 2012 Juhani Åhman*. 
+*Copyright 2013 Juhani Åhman*. 
 Unless otherwise noted, the source files are distributed under the
 *MIT License* found in the LICENSE file.
