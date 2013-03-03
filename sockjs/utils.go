@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"unicode/utf8"
-	"log"
 )
 
 var dummyCookie = &http.Cookie{

@@ -113,8 +113,9 @@ func legacyHandler(h *handler,
 
 	if h.config.VerifyAddr && !s.verifyAddr(r.RemoteAddr) {
 		// not sure what a proper code should be here
-		 p.write(w, cframe(3001, "Remote address mismatch"))
-		// TODO LOGGGG
+		p.write(w, cframe(3001, "Remote address mismatch"))
+		logPrintf(h.config.Logger, "%s: request with remote address mismatch from: %s\n",
+			s, r.RemoteAddr)
 		return
 	}
 
@@ -146,7 +147,7 @@ func legacyHandler(h *handler,
 		}
 		_, err = p.write(w, m)
 		if err != nil {
-			//logPrintf(h.config.Logger, "%s: write error: %s\n", s, err)
+			logPrintf(h.config.Logger, "%s: send error: %s\n", s, err)
 			goto disconnect
 		}
 	} else {
@@ -159,6 +160,7 @@ func legacyHandler(h *handler,
 			}
 			n, err = p.write(w, m)
 			if err != nil {
+				logPrintf(h.config.Logger, "%s: send error: %s\n", s, err)
 				goto disconnect
 			}
 			sent += n

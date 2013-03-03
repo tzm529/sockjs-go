@@ -19,8 +19,8 @@ type websocketClosure struct {
 type websocketSession struct {
 	// read-only
 	config *Config
-	info *RequestInfo
-	ws   *websocket.Conn
+	info   *RequestInfo
+	ws     *websocket.Conn
 
 	closer   chan *websocketClosure
 	hbTicker *time.Ticker

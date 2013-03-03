@@ -7,8 +7,6 @@ import (
 )
 
 func echoHandler(s sockjs.Session) {
-	fmt.Println("session opened")
-	
 	for {
 		m := s.Receive()
 		if m == nil {
@@ -16,7 +14,6 @@ func echoHandler(s sockjs.Session) {
 		}
 		s.Send(m)
 	}
-	fmt.Println("session closing")
 }
 
 func main() {

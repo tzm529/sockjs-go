@@ -59,12 +59,16 @@ func xhrSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid s
 	decoder = json.NewDecoder(r.Body)
 	if err := decoder.Decode(&messages); err != nil {
 		if err == io.EOF {
+			errmsg := "Payload expected."
+			logPrintf(h.config.Logger, "%s: receive error: \"%s\"\n", s, errmsg)
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Payload expected."))
+			w.Write([]byte(errmsg))
 			return
 		}
+		errmsg := "Broken JSON encoding."
+		logPrintf(h.config.Logger, "%s: receive error: \"%s\"\n", s, errmsg)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Broken JSON encoding."))
+		w.Write([]byte(errmsg))
 		return
 	}
 

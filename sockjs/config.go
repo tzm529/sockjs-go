@@ -47,7 +47,7 @@ type Config struct {
 	// Default: []string{"referer", "x-client-ip", "x-forwarded-for",
 	//                   "x-cluster-client-ip", "via", "x-real-ip", "host"}
 	Headers []string
-	
+
 	// Logger used for logging various information.
 	// Useful for debugging.
 	// Set Logger to nil to disable logging.
