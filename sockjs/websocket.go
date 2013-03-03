@@ -193,7 +193,6 @@ func websocketHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid
 		// initiate connection
 		_, err := ws.Write([]byte{'o'})
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
