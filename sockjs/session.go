@@ -39,7 +39,7 @@ type legacySession struct {
 	proto  protocol
 	config *Config
 	sessid string
-	pool   *pool
+	pool   *legacyPool
 
 	sendBuffer chan []byte
 	sendFrame  chan []byte
@@ -116,7 +116,7 @@ func (s *legacySession) String() string {
 
 //* Private methods
 
-func (s *legacySession) init(config *Config, proto protocol, sessid string, pool *pool) {
+func (s *legacySession) init(config *Config, proto protocol, sessid string, pool *legacyPool) {
 	s.config = config
 	s.proto = proto
 	s.sessid = sessid

@@ -7,46 +7,13 @@ import (
 	"github.com/fzzy/sockjs-go/sockjs"
 	"net/http"
 	"strings"
-	"sync"
 )
 
-// Pool is a structure for holding chat users and broadcasting messages to them.
-type pool struct {
-	sync.RWMutex
-	pool map[sockjs.Session]struct{}
-}
-
-func newPool() (p *pool) {
-	p = new(pool)
-	p.pool = make(map[sockjs.Session]struct{})
-	return
-}
-
-func (p *pool) add(s sockjs.Session) {
-	p.Lock()
-	defer p.Unlock()
-	p.pool[s] = struct{}{}
-}
-
-func (p *pool) remove(s sockjs.Session) {
-	p.Lock()
-	defer p.Unlock()
-	delete(p.pool, s)
-}
-
-func (p *pool) broadcast(m []byte) {
-	p.RLock()
-	defer p.RUnlock()
-	for s := range p.pool {
-		s.Send(m)
-	}
-}
-
-var users *pool = newPool()
+var users *sockjs.Pool = sockjs.NewPool()
 
 func chatHandler(s sockjs.Session) {
-	users.add(s)
-	defer users.remove(s)
+	users.Add(s)
+	defer users.Remove(s)
 
 	for {
 		m := s.Receive()
@@ -56,7 +23,7 @@ func chatHandler(s sockjs.Session) {
 		fullAddr := s.Info().RemoteAddr
 		addr := fullAddr[:strings.LastIndex(fullAddr, ":")]
 		m = []byte(fmt.Sprintf("%s: %s", addr, m))
-		users.broadcast(m)
+		users.Broadcast(m)
 	}
 }
 

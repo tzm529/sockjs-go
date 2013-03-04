@@ -16,7 +16,7 @@ type handler struct {
 	prefix string
 	hfunc  func(Session)
 	config *Config
-	pool   *pool
+	pool   *legacyPool
 }
 
 func newHandler(prefix string, hfunc func(Session), c *Config) (h *handler) {
@@ -24,7 +24,7 @@ func newHandler(prefix string, hfunc func(Session), c *Config) (h *handler) {
 	h.prefix = prefix
 	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
-	h.pool = newPool()
+	h.pool = newLegacyPool()
 	return h
 }
 
