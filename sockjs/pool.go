@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// Session pool for legacy protocols.
+// Session pool for storing legacy sessions.
 type pool struct {
 	sync.RWMutex
 	pool map[string]*legacySession

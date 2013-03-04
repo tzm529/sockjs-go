@@ -14,7 +14,7 @@ type nopHandler int
 
 func (n nopHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {}
 
-func (s *ServerSuite) TestServerMatch(c *C) {
+func (s *ServerSuite) TestMatch(c *C) {
 	conf := NewConfig()
 	alt := nopHandler(0)
 	long := newHandler("/prefix/long", nil, &conf)

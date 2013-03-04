@@ -32,7 +32,6 @@ type websocketSession struct {
 
 	mu     sync.RWMutex
 	closed bool
-
 }
 
 //* Public methods

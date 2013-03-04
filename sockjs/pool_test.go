@@ -14,13 +14,13 @@ func (s *PoolSuite) SetUpTest(c *C) {
 	s.p = newPool()
 }
 
-func (s *PoolSuite) TestPoolGet(c *C) {
+func (s *PoolSuite) TestGet(c *C) {
 	session := new(legacySession)
 	s.p.pool["foo"] = session
 	c.Check(s.p.get("foo"), Equals, session)
 }
 
-func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
+func (s *PoolSuite) TestGetOrCreate(c *C) {
 	session, exists := s.p.getOrCreate("foo")
 	c.Assert(session, DeepEquals, session)
 	c.Assert(exists, Equals, false)
@@ -30,7 +30,7 @@ func (s *PoolSuite) TestPoolGetOrCreate(c *C) {
 	c.Assert(exists, Equals, true)
 }
 
-func (s *PoolSuite) TestPoolRemove(c *C) {
+func (s *PoolSuite) TestRemove(c *C) {
 	session := new(legacySession)
 	s.p.pool["foo"] = session
 	s.p.remove("foo")

@@ -9,9 +9,9 @@ import (
 // but just for SockJS handlers. It can optionally wrap an alternate http.Handler which is called 
 // for non-SockJS paths.
 type Server struct {
-	mu   sync.RWMutex
-	m    map[string]*handler
-	alt  http.Handler
+	mu  sync.RWMutex
+	m   map[string]*handler
+	alt http.Handler
 }
 
 func NewServer(alt http.Handler) *Server {
