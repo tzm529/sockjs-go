@@ -12,7 +12,7 @@ import (
 
 // ChatPool is a structure for holding chat users and broadcasting messages to them.
 type userPool struct {
-	sync.Mutex
+	sync.RWMutex
 	users map[sockjs.Session]struct{}
 }
 
@@ -35,8 +35,8 @@ func (p *userPool) remove(s sockjs.Session) {
 }
 
 func (p *userPool) broadcast(m []byte) {
-	p.Lock()
-	defer p.Unlock()
+	p.RLock()
+	defer p.RUnlock()
 	for s := range p.users {
 		s.Send(m)
 	}
