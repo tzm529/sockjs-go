@@ -10,39 +10,39 @@ import (
 	"sync"
 )
 
-// ChatPool is a structure for holding chat users and broadcasting messages to them.
-type userPool struct {
+// Pool is a structure for holding chat users and broadcasting messages to them.
+type pool struct {
 	sync.RWMutex
-	users map[sockjs.Session]struct{}
+	pool map[sockjs.Session]struct{}
 }
 
-func newUserPool() (p *userPool) {
-	p = new(userPool)
-	p.users = make(map[sockjs.Session]struct{})
+func newPool() (p *pool) {
+	p = new(pool)
+	p.pool = make(map[sockjs.Session]struct{})
 	return
 }
 
-func (p *userPool) add(s sockjs.Session) {
+func (p *pool) add(s sockjs.Session) {
 	p.Lock()
 	defer p.Unlock()
-	p.users[s] = struct{}{}
+	p.pool[s] = struct{}{}
 }
 
-func (p *userPool) remove(s sockjs.Session) {
+func (p *pool) remove(s sockjs.Session) {
 	p.Lock()
 	defer p.Unlock()
-	delete(p.users, s)
+	delete(p.pool, s)
 }
 
-func (p *userPool) broadcast(m []byte) {
+func (p *pool) broadcast(m []byte) {
 	p.RLock()
 	defer p.RUnlock()
-	for s := range p.users {
+	for s := range p.pool {
 		s.Send(m)
 	}
 }
 
-var users *userPool = newUserPool()
+var users *pool = newPool()
 
 func chatHandler(s sockjs.Session) {
 	users.add(s)
