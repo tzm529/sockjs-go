@@ -29,7 +29,7 @@ type Session interface {
 	// request.
 	Info() RequestInfo
 
-	// Protocol returns the underlying protocol type of the session.
+	// Protocol returns the underlying transport protocol of the session.
 	Protocol() Protocol
 
 	// String returns a string representation of the session.

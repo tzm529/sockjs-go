@@ -36,7 +36,7 @@ func (s *rawWebsocketSession) Close(code int, reason string) {
 
 func (s *rawWebsocketSession) Info() RequestInfo  { return *s.info }
 func (s *rawWebsocketSession) Protocol() Protocol { return ProtocolRawWebsocket }
-func (s *rawWebsocketSession) String() string { return s.Info().RemoteAddr }
+func (s *rawWebsocketSession) String() string     { return s.Info().RemoteAddr }
 
 func rawWebsocketHandler(h *handler, w http.ResponseWriter, r *http.Request) {
 	if !h.config.Websocket {
