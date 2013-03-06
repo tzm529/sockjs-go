@@ -69,3 +69,9 @@ func logPrintf(logger *log.Logger, format string, args ...interface{}) {
 		logger.Printf(format, args...)
 	}
 }
+
+func logWriteErr(logger *log.Logger, w http.ResponseWriter, s Session, errmsg string) {
+	logPrintf(logger, "%s: receive error: \"%s\"\n", s, errmsg)
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte(errmsg))
+}

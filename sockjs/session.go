@@ -29,8 +29,11 @@ type Session interface {
 	// request.
 	Info() RequestInfo
 
-	// Protocol returns the underlying protocol of the session.
+	// Protocol returns the underlying protocol type of the session.
 	Protocol() Protocol
+
+	// String returns a string representation of the session.
+	String() string
 }
 
 // Session for legacy protocols.

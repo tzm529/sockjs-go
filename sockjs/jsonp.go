@@ -79,18 +79,12 @@ func jsonpSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid
 	}
 
 	if len(data) == 0 {
-		errmsg := "Payload expected."
-		logPrintf(h.config.Logger, "%s: receive error: \"%s\"\n", s, errmsg)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(errmsg))
+		logWriteErr(h.config.Logger, w, s, "Payload expected.")
 		return
 	}
 
 	if err := json.Unmarshal(data, &messages); err != nil {
-		errmsg := "Broken JSON encoding."
-		logPrintf(h.config.Logger, "%s: receive error: \"%s\"\n", s, errmsg)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(errmsg))
+		logWriteErr(h.config.Logger, w, s, "Broken JSON encoding.")
 		return
 	}
 
