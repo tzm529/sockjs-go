@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var users *sockjs.Pool = sockjs.NewPool()
+var users *sockjs.SessionPool = sockjs.NewSessionPool()
 
 func chatHandler(s sockjs.Session) {
 	users.Add(s)

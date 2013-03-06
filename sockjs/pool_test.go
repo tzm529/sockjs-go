@@ -4,24 +4,24 @@ import (
 	. "launchpad.net/gocheck"
 )
 
-type PoolSuite struct {
-	p *Pool
+type SessionPoolSuite struct {
+	p *SessionPool
 }
 
-var _ = Suite(&PoolSuite{})
+var _ = Suite(&SessionPoolSuite{})
 
-func (s *PoolSuite) SetUpTest(c *C) {
-	s.p = NewPool()
+func (s *SessionPoolSuite) SetUpTest(c *C) {
+	s.p = NewSessionPool()
 }
 
-func (s *PoolSuite) TestAdd(c *C) {
+func (s *SessionPoolSuite) TestAdd(c *C) {
 	session := new(legacySession)
 	s.p.Add(session)
 	_, exists := s.p.pool[session]
 	c.Check(exists, Equals, true)
 }
 
-func (s *PoolSuite) TestRemove(c *C) {
+func (s *SessionPoolSuite) TestRemove(c *C) {
 	session := new(legacySession)
 	s.p.Add(session)
 	s.p.Remove(session)

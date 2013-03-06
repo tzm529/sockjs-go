@@ -4,20 +4,20 @@ import (
 	"sync"
 )
 
-// Pool is a structure for thread-safely storing sessions and broadcasting messages to them.
-type Pool struct {
+// SessionPool is a structure for thread-safely storing sessions and broadcasting messages to them.
+type SessionPool struct {
 	mu   sync.RWMutex
 	pool map[Session]struct{}
 }
 
-func NewPool() (p *Pool) {
-	p = new(Pool)
+func NewSessionPool() (p *SessionPool) {
+	p = new(SessionPool)
 	p.pool = make(map[Session]struct{})
 	return
 }
 
 // Add adds the given session to the session pool.
-func (p *Pool) Add(s Session) {
+func (p *SessionPool) Add(s Session) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.pool[s] = struct{}{}
@@ -25,14 +25,14 @@ func (p *Pool) Add(s Session) {
 
 // Remove removes the given session from the session pool.
 // It is safe to remove non-existing sessions.
-func (p *Pool) Remove(s Session) {
+func (p *SessionPool) Remove(s Session) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	delete(p.pool, s)
 }
 
 // Broadcast sends the given message to every session in the pool.
-func (p *Pool) Broadcast(m []byte) {
+func (p *SessionPool) Broadcast(m []byte) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	for s := range p.pool {
