@@ -31,7 +31,15 @@ func newHandler(prefix string, hfunc func(Session), c *Config) http.Handler {
 // NewHandler creates a new SockJS handler with the given
 // prefix, handler function and configuration.
 func NewHandler(prefix string, hfunc func(Session), c Config) http.Handler {
-	return newHandler(prefix, hfunc, &c)
+	h := newHandler(prefix, hfunc, &c)
+	f := func(w http.ResponseWriter, r *http.Request) {
+		if pathMatch(prefix, r.URL.Path) {
+			h.ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	}
+	return http.HandlerFunc(f)
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
