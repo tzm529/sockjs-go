@@ -51,6 +51,8 @@ again:
 	var data []byte
 	var messages []string
 
+	// BUG(fzzy): 
+	// Received websocket message size should be limited to something reasonable.
 	err := websocket.Message.Receive(s.ws, &data)
 	if err != nil {
 		goto disconnect
