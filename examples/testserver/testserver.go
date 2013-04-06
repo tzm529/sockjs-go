@@ -20,9 +20,9 @@ func main() {
 	mux := sockjs.NewServeMux(http.DefaultServeMux)
 	conf := sockjs.NewConfig()
 	conf.ResponseLimit = 4096
-	dwsconf := conf
+	dwsconf := sockjs.NewConfig()
 	dwsconf.Websocket = false
-	cookieconf := conf
+	cookieconf := sockjs.NewConfig()
 	cookieconf.Jsessionid = true
 
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
