@@ -59,7 +59,7 @@ func (m *ServeMux) match(path string) (h http.Handler) {
 		}
 		if h == nil || len(k) > n {
 			n = len(k)
-			h = http.Handler(v)
+			h = v
 		}
 	}
 	if h == nil {
