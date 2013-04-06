@@ -17,7 +17,7 @@ func echoHandler(s sockjs.Session) {
 }
 
 func main() {
-	server := sockjs.NewServer(http.DefaultServeMux)
+	mux := sockjs.NewServeMux(http.DefaultServeMux)
 	conf := sockjs.NewConfig()
 	conf.ResponseLimit = 4096
 	dwsconf := conf
@@ -26,13 +26,13 @@ func main() {
 	cookieconf.Jsessionid = true
 
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
-	server.Handle("/echo", echoHandler, conf)
-	server.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
-	server.Handle("/cookie_needed_echo", echoHandler, cookieconf)
-	server.Handle("/close",
+	mux.Handle("/echo", echoHandler, conf)
+	mux.Handle("/disabled_websocket_echo", echoHandler, dwsconf)
+	mux.Handle("/cookie_needed_echo", echoHandler, cookieconf)
+	mux.Handle("/close",
 		func(s sockjs.Session) { s.End() },
 		conf)
-	err := http.ListenAndServe(":8081", server)
+	err := http.ListenAndServe(":8081", mux)
 	if err != nil {
 		fmt.Println(err)
 	}

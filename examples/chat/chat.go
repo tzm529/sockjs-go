@@ -32,13 +32,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	server := sockjs.NewServer(http.DefaultServeMux)
+	mux := sockjs.NewServeMux(http.DefaultServeMux)
 	conf := sockjs.NewConfig()
 	http.Handle("/static", http.FileServer(http.Dir("./static")))
 	http.HandleFunc("/", indexHandler)
-	server.Handle("/chat", chatHandler, conf)
+	mux.Handle("/chat", chatHandler, conf)
 
-	err := http.ListenAndServe(":8081", server)
+	err := http.ListenAndServe(":8081", mux)
 	if err != nil {
 		fmt.Println(err)
 	}
