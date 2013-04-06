@@ -31,6 +31,10 @@ func newHandler(prefix string, hfunc func(Session), c *Config) http.Handler {
 // NewHandler creates a new SockJS handler with the given
 // prefix, handler function and configuration.
 func NewHandler(prefix string, hfunc func(Session), c Config) http.Handler {
+	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
+		panic("sockjs: prefix must not end with a slash")
+	}
+
 	h := newHandler(prefix, hfunc, &c)
 	f := func(w http.ResponseWriter, r *http.Request) {
 		if pathMatch(prefix, r.URL.Path) {
