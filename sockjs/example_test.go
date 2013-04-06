@@ -35,7 +35,7 @@ func Example() {
 }
 
 func ExampleNewHandler() {
-	// Handle only SockJS requests prefixed with "/echo" and nothing else.
+	// Handle only SockJS requests prefixed with "/echo".
 	h := sockjs.NewHandler("/echo", echoHandler, sockjs.NewConfig())
 	err := http.ListenAndServe(":8081", h)
 	if err != nil {
