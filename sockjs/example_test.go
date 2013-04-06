@@ -18,7 +18,6 @@ func echoHandler(s sockjs.Session) {
 
 func Example() {
 	// Handlers for two echo servers and a file server.
-
 	conf := sockjs.NewConfig()
 	dwsconf := sockjs.NewConfig()
 	dwsconf.Websocket = false
