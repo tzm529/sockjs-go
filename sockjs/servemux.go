@@ -30,10 +30,10 @@ func (m *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (m *ServeMux) Handle(prefix string, hfunc func(Session), c Config) {
 	if len(prefix) > 0 && prefix[len(prefix)-1] == '/' {
-		panic("sockjs: prefix must not end with a slash")
+		panic("prefix must not end with a slash")
 	}
 	if _, ok := m.m[prefix]; ok {
-		panic("sockjs: multiple registrations for " + prefix)
+		panic("multiple registrations for " + prefix)
 	}
 
 	m.mu.Lock()
