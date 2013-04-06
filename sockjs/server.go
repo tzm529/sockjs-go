@@ -10,13 +10,15 @@ import (
 // for non-SockJS paths.
 type Server struct {
 	mu  sync.RWMutex
-	m   map[string]*handler
+	m   map[string]http.Handler
 	alt http.Handler
 }
 
+// NewServer creates a new Server with the given alternate handler.
+// If alt is nil, alternate handler is not used.
 func NewServer(alt http.Handler) *Server {
 	m := new(Server)
-	m.m = make(map[string]*handler)
+	m.m = make(map[string]http.Handler)
 	m.alt = alt
 	return m
 }

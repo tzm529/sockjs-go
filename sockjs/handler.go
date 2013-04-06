@@ -19,13 +19,19 @@ type handler struct {
 	pool   *legacyPool
 }
 
-func newHandler(prefix string, hfunc func(Session), c *Config) (h *handler) {
-	h = new(handler)
+func newHandler(prefix string, hfunc func(Session), c *Config) http.Handler {
+	h := new(handler)
 	h.prefix = prefix
 	h.hfunc = hfuncCloseWrapper(hfunc)
 	h.config = c
 	h.pool = newLegacyPool()
 	return h
+}
+
+// NewHandler creates a new SockJS handler with the given
+// prefix, handler function and configuration.
+func NewHandler(prefix string, hfunc func(Session), c Config) http.Handler {
+	return newHandler(prefix, hfunc, &c)
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
