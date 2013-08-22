@@ -71,6 +71,9 @@ func jsonpSendHandler(h *handler, w http.ResponseWriter, r *http.Request, sessid
 			return
 		}
 		data = []byte(m.Get("d"))
+		if len(data) == 0 {
+			data = []byte(r.PostForm.Get("d"))
+		}
 	case "text/plain":
 		data = buf.Bytes()
 	default:
